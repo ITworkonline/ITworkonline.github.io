@@ -1,0 +1,91 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<link href="style/my.css" rel="stylesheet" type="text/css" />
+	<title>Jie Wang</title>
+	<script>
+	function copy(dest, source) {
+  		if(dest.source == source) {
+  		  dest.innerHTML = "";
+  		  dest.source = null;
+  		}
+  		else {
+  		  dest.innerHTML = source.innerHTML;
+  		  dest.source = source;
+  		}
+  		dest.blur();
+	}
+	</script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+    <script> 
+    $(function(){
+      $("#includepubs").load("recent.html"); 
+      $("#includereading").load("reading.html");
+    });
+    </script>
+</head>
+
+<body>
+
+<div id="wrapper">
+<!-- header info -->
+<div id="header">
+<div id="profile">
+	<img src="figures/jie.png" height=250>
+</div>
+<div id="contact">	
+	<table border="0">
+	<tr>
+	<td><font size=5><b>Jie Wang</b> &nbsp;</font></td>
+	<td><img align=right src="figures/name.jpeg" height=50></td>
+	<td><font size="2">&nbsp; (<a href="pronunciation.html">How to pronounce?</a>)</font></td>
+	</tr>
+	</table>
+	<br>
+	Senior undergraduate in computer science <br>
+	University of Colorado Boulder <br>
+    <p><font face="courier">jiwa0171@colorado.edu</font></p>
+    <p>
+    [<a href="docs/cv/jiewang_resume.pdf">CV</a>]
+    </p>
+	<br>
+
+</div>
+</div>
+
+<!-- main content -->
+<div id="content">
+<div class="section">
+    <p>
+    <b>Briefly introduction:
+    </b>
+    </p>
+    <p>
+      I am a undergraduate student at <a href=https://www.colorado.edu/cs/>CU Boulder CS</a> right now. I come from Hefei, Anhui, China(PRC). I studied about 10 years in China. And now live and study in Boulder, CO. I am a student of Professor <a href=https://chenhaot.com/>Chenhao Tan</a>. My research area is Language Model(BERT), machine learning, and natural language processing.
+    </p>
+    <p>
+      Here is my reason for taking ML and NLP as my area. I think machine learning is the fourth industrial revolution, just like steam engine for the first industrial revolution, electricity for the second industrial revolution, and computer for the third industrial revolution. However, in these revolutions, they all didn't replace human, just free people's hands to do more creative things. 
+    </p>
+    <p>
+    <b>Hobbies and what I do in my free time:</b></p>
+    <p>
+      Shotting on my favourite "Sony A7m2" on weekends. Play guitar and sing the songs (usually country music or folk music) Here are some samples of my picture.
+    </p>
+</div>
+<hr color="#">
+<div class="section">
+<div class="section_title"><p id="pubs">Recently my work:  </p></div>
+<div id="includepubs"></div>
+</div>
+
+<div class="section">
+<div class="section_title"><p id="reading">Recently my reading:  </p></div>
+<div id="includereading"></div>
+</div>
+
+
+
+<!-- content end -->
+</div>
+</body>

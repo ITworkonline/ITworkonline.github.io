@@ -1,0 +1,184 @@
+\documentclass[a4paper,11pt]{article}
+
+%A Few Useful Packages
+\usepackage{marvosym}
+\usepackage{comment}
+\usepackage{url,parskip}     %other packages for formatting
+\RequirePackage{color,graphicx}
+\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage[big]{layaureo}                 %better formatting of the A4 page
+% an alternative to Layaureo can be ** \usepackage{fullpage} **
+\usepackage{supertabular}                 %for Grades
+\usepackage{titlesec}                    %custom \section
+
+%Setup hyperref package, and colours for links
+\usepackage{hyperref}
+\definecolor{linkcolour}{rgb}{0,0.2,0.6}
+\hypersetup{colorlinks,breaklinks,urlcolor=linkcolour, linkcolor=linkcolour}
+
+%FONTS
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{tgtermes}
+
+\usepackage{longtable}
+
+%CV Sections inspired by: 
+%http://stefano.italians.nl/archives/26
+\titleformat{\section}{\large\bfseries\scshape\raggedright}{}{0em}{}[\titlerule]
+\titlespacing{\section}{0pt}{10pt}{3pt}
+\titleformat{\subsection}{\scshape\raggedright}{}{0em}{}
+\titlespacing{\subsection}{0pt}{6pt}{0pt}
+%Tweak a bit the top margin
+%\addtolength{\voffset}{-1.3cm}
+
+%--------------------BEGIN DOCUMENT----------------------
+\begin{document}
+
+\pagestyle{empty} % non-numbered pages
+
+%--------------------TITLE-------------
+\par{\centering
+        {\Huge He \textsc{He}
+    }\bigskip\par}
+
+%--------------------SECTIONS-----------------------------------
+%Section: Personal Data
+\section{Personal}
+
+\begin{tabular}{rl}
+    Email:     & hehe@cs.nyu.edu \\
+	Homepage:  & \url{hhexiy.github.io}	
+\end{tabular}
+
+%\section{Research Interests}
+%Natural language processing, machine learning
+
+%Section: Education
+\section{Education}
+\begin{tabular}{rl}    
+2011--2016 & \textbf{University of Maryland, College Park}\\
+    & Ph.D. in Computer Science (M.Sc. in Computer Science received in 2013) \\
+    & Advisors: Hal Daum\'e III, Jordan Boyd-Graber \\
+\\
+2007--2011 & \textbf{The Hong Kong Polytechnic University}\\
+& B.Eng. in Electronic and Information Engineering
+\end{tabular}
+
+\section{Work Experience}
+\begin{tabular}{rl}    
+2019--   & \textbf{New York University}, New York, NY \\
+    & Assistant Professor \\
+\\
+2018--2019  & \textbf{Amazon Web Services}, Palo Alto, CA \\
+    & Senior Applied Scientist \\
+\\
+2016--2018 & \textbf{Stanford University}, Stanford, CA\\
+& Post-doc \hspace{2em} Supervisor: Percy Liang \\
+\\
+Summer 2015 & {\bf Microsoft Cloud Information and Service Lab}, Redmond, WA\\
+& Research Intern \hspace{2em} Mentors: Paul Mineiro, Nikos Karampatziakis\\
+\\
+Summer 2013 & {\bf Microsoft Research}, Redmond, WA\\
+& Research Intern \hspace{2em} Mentors: Lihong Li, Jason Williams
+\end{tabular}
+
+\section{Awards and Honors}
+\begin{tabular}{rl}    
+2016 & Larry S. Davis Dissertation Award\\
+2016 & Board of Visitors Graduate Student Award, UMD\\
+2015 & Best Demonstration Award, NIPS\\
+2015 & Tammy L. Blair Award 2nd runner-up, Fusion\\
+%2011--2012 & Dean's Fellowship, UMD \\
+%Best Academic Performance Award, HKPolyU \hfill 2008--2010\\
+%Dean's Honors List, HKPolyU \hfill 2008--2010\\
+%2008--2010 & HSBC Scholarship \\
+%2008--2010 & CMA \& Donors Scholarship\\
+%Non-local Students Scholarship (academic), HKPolyU \hfill 2007--2010\\
+\end{tabular}
+
+\section{Publications}
+($^*$ indicates equal contribution)
+\subsection{Peer-reviewed conference papers}
+\input{conference}
+
+\subsection{Peer-reviewed workshop papers}
+\input{workshop}
+
+\subsection{Technical reports}
+\input{arxiv}
+
+\section{Teaching} 
+\subsection{University courses}
+\begin{tabular}{rl}
+2011 & Teaching Assistant, Object-Oriented Programming, University of Maryland, College Park
+\end{tabular}
+
+\subsection{Tutorials}
+\begin{tabular}{rl}
+    2019 & Tutorial on Dive into Deep Learning for Natural Language Processing, EMNLP \\
+         & (with Haibin Lin, Xingjian Shi, Leonard Lausen, Aston Zhang, Sheng Zha and Alexander Smola) \\
+    2015 & Tutorial on Learning to Search for Structured Prediction, NAACL \\
+         & (with Hal Daum\'e III, John Langford, Kai-Wei Chang and Sudha Rao)
+\end{tabular}
+
+\section{Invited Talks}
+\begin{longtable}{rl}
+    2019 & Workshop on Machine Learning for Network Data, New York, NY \\
+    2019 & NAACL Workshop on Structured Prediction for NLP \\
+    2019 & NAACL Workshop on Methods for Optimizing and Evaluating Neural Language Generation \\
+    2018 & NIPS Workshop on Emergent Communication \\
+    2018 & Carnegie Mellon University, LTI Colloquium \\
+    2018 & West Coast NLP Summit, Menlo Park, CA \\
+    2018 & Google Brain, Mountain View, CA \\
+    2018 & Amazon Web Services, East Palo Alto, CA \\
+    2018 & Facebook AI Research, Menlo Park, CA \\
+    2018 & University of Southern California, Department of Computer Sciences \\
+    2018 & University of California, San Diego, Department of Computer Sciences \\
+    2018 & University of California, Irvine, School of Information and Computer Sciences \\
+    2018 & University of California, Berkeley, Department of Electrical Engineering and Computer Sciences \\
+    2018 & University of Chicago, Department of Computer Sciences \\
+    2018 & Toyota Technological Institute at Chicago \\
+    2018 & New York University, Department of Computer Sciences \\
+    2018 & Princeton University, Department of Computer Sciences \\
+    2018 & Carnegie Mellon University, Language Technology Institute and Machine Learning Department \\
+    2018 & University of North Carolina, Chaple Hill, Department of Computer Science \\
+    2018 & Geogia Institute of Technology, Collge of Computing \\
+    2018 & McGill University, School of Computer Science \\
+    2017 & University of Southern California, Information Sciences Institute \\
+    2017 & University of California, Berkeley, School of Information \\
+    2017 & Shanghai Jiaotong University, John Hopcroft Center for Computer Science \\
+    2017 & Allen Institute for AI, Seattle, WA \\
+    2017 & Salesforce Research, Palo Alto, CA \\
+    2017 & Amazon Web Services, East Palo Alto, CA \\
+    2015 & University of Pennsylvania, Department of Computer and Information Science \\
+    2015 & University of Colorado, Boulder, Department of Computer Science \\
+    2015 & Microsoft Research, New York, NY \\
+\end{longtable}
+
+\section{Professional Activities}
+\subsection{Reviewing}
+\textbf{Conferencex}: ACL, NAACL, EMNLP, NIPS, ICML, AAAI, AISTATS \\
+\textbf{Journal}: TACL \\
+\textbf{Area chair}: NAACL 2019
+
+\subsection{Workshop organization}
+\begin{longtable}{rl}
+2019 & Co-organizer, ICML Workshop on Imitation, Intent, and Interaction \\
+2018 & Co-organizer, ACL Workshop on Representation Learning for NLP \\
+2017 & Co-chair, ACL Workshop for Women and Underrepresented Minorities in NLP \\
+2016 & Co-chair, ACL Student Research Workshop \\
+2016 & Co-organizer, NAACL Workshop on Human-computer Question Answering \\
+2015 & Co-organizer, Mid-Atlantic Student Colloquium on Speech, Language and Learning
+\end{longtable}
+
+\section{Students}
+\subsection{Ph.D. students}
+\begin{itemize}
+    \item Yuanzhe Pang, Computer Science, 2019 --
+\end{itemize}
+
+
+
+\end{document}
+
