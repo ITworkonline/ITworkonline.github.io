@@ -123,3 +123,24 @@ div.section_title {
   font-weight: bold;
   color: #000000;
 }
+
+.goog-te-gadget-simple {
+background-color: #6f6f6ffc;
+border-left: 0pxsolid#d5d5d5;
+border-top: 0pxsolid#9b9b9b;
+border-bottom: 0pxsolid#e8e8e8;
+border-right: 0pxsolid#d5d5d5;
+font-size: 7pt;
+display: inline-block;
+cursor: pointer;
+margin-top: 11px;
+zoom: 1;
+display: inline;
+}
+.goog-te-gadget-icon {
+margin-left: 2px;
+width: 1px;
+height: 0px;
+border: none;
+vertical-align: middle;
+}
