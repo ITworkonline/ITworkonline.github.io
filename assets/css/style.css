@@ -239,6 +239,8 @@ article.active {
   font-weight: var(--fw-500);
 }
 
+.h13 {text-align: right;}
+
 .article-title {
   position: relative;
   padding-bottom: 7px;
@@ -550,7 +552,7 @@ main {
 
 .service-item-text {
   color: var(--light-gray);
-  font-size: var(--fs-6);
+  font-size: var(--fs-);
   font-weight: var(--fw-3);
   line-height: 1.6;
 }
