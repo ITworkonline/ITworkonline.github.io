@@ -212,21 +212,28 @@ async function refreshAccessToken() {
     }
 
     try {
-        const response = await fetch(`${TESLA_AUTH_BASE}/oauth2/v3/token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-                grant_type: 'refresh_token',
-                client_id: config.clientId,
-                client_secret: config.clientSecret,
-                refresh_token: config.refreshToken
-            })
-        });
+        let response;
+        try {
+            response = await fetch(`${TESLA_AUTH_BASE}/oauth2/v3/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    grant_type: 'refresh_token',
+                    client_id: config.clientId,
+                    client_secret: config.clientSecret,
+                    refresh_token: config.refreshToken
+                })
+            });
+        } catch (fetchError) {
+            console.error('刷新 token 的 Fetch 错误:', fetchError);
+            throw new Error(`网络请求失败: ${fetchError.message}`);
+        }
 
         if (!response.ok) {
-            throw new Error(`Token 刷新失败: ${response.status}`);
+            const errorData = await response.text().catch(() => '无法读取错误信息');
+            throw new Error(`Token 刷新失败: ${response.status} - ${errorData}`);
         }
 
         const data = await response.json();
@@ -415,17 +422,58 @@ async function handleOAuthCallback() {
             redirect_uri: config.redirectUri
         });
         
-        const response = await fetch(`${TESLA_AUTH_BASE}/oauth2/v3/token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: tokenParams
-        });
+        console.log('发送 token 请求到:', `${TESLA_AUTH_BASE}/oauth2/v3/token`);
+        
+        let response;
+        try {
+            response = await fetch(`${TESLA_AUTH_BASE}/oauth2/v3/token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: tokenParams
+            });
+        } catch (fetchError) {
+            console.error('Fetch 错误详情:', fetchError);
+            // 提供更详细的错误信息
+            let errorMsg = '网络请求失败: ';
+            if (fetchError.message.includes('Failed to fetch')) {
+                errorMsg += '无法连接到 Tesla 服务器。\n\n可能的原因：\n';
+                errorMsg += '1. 网络连接问题\n';
+                errorMsg += '2. CORS 策略阻止（如果使用 file:// 协议）\n';
+                errorMsg += '3. Tesla API 服务器暂时不可用\n';
+                errorMsg += '4. 防火墙或代理设置阻止了请求\n\n';
+                errorMsg += '请检查网络连接，或尝试使用 HTTPS 协议访问页面。';
+            } else {
+                errorMsg += fetchError.message;
+            }
+            throw new Error(errorMsg);
+        }
         
         if (!response.ok) {
-            const errorData = await response.text();
-            throw new Error(`获取 token 失败: ${response.status} - ${errorData}`);
+            let errorData;
+            try {
+                errorData = await response.text();
+            } catch (e) {
+                errorData = `无法读取错误响应: ${e.message}`;
+            }
+            
+            console.error('Token 请求失败:', response.status, errorData);
+            
+            // 解析错误信息
+            let errorMessage = `获取 token 失败 (${response.status})`;
+            try {
+                const errorJson = JSON.parse(errorData);
+                if (errorJson.error_description) {
+                    errorMessage += `: ${errorJson.error_description}`;
+                } else if (errorJson.error) {
+                    errorMessage += `: ${errorJson.error}`;
+                }
+            } catch (e) {
+                errorMessage += `: ${errorData}`;
+            }
+            
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
@@ -462,8 +510,14 @@ async function handleOAuthCallback() {
         
         // 显示详细的错误信息
         let errorMessage = error.message;
-        if (errorMessage.includes('unauthorized_client')) {
-            errorMessage = 'Client ID 和 Client Secret 组合无效。\n\n请检查：\n1. Client Secret 是否正确填写\n2. Client ID 和 Client Secret 是否匹配\n3. 是否在 Tesla 开发者平台中正确配置';
+        
+        // 处理不同类型的错误
+        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('网络请求失败')) {
+            errorMessage = '网络连接失败\n\n可能的原因：\n1. 网络连接问题\n2. Tesla API 服务器暂时不可用\n3. 防火墙或代理设置阻止了请求\n4. 浏览器安全策略限制\n\n请检查：\n- 网络连接是否正常\n- 是否能访问 https://auth.tesla.com\n- 浏览器控制台是否有更多错误信息';
+        } else if (errorMessage.includes('unauthorized_client')) {
+            errorMessage = 'Client ID 和 Client Secret 组合无效\n\n请检查：\n1. Client Secret 是否正确填写\n2. Client ID 和 Client Secret 是否匹配\n3. 是否在 Tesla 开发者平台中正确配置';
+        } else if (errorMessage.includes('CORS')) {
+            errorMessage = 'CORS 错误：跨域请求被阻止\n\n请确保使用 HTTPS 协议访问页面，而不是 file:// 协议';
         }
         
         updateOAuthStatus('error', `错误: ${errorMessage}`);
@@ -498,16 +552,23 @@ async function fetchVehicles() {
     try {
         updateOAuthStatus('loading', '正在获取车辆列表...');
         
-        const response = await fetch(`${TESLA_API_BASE}/api/1/vehicles`, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${config.apiToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
+        let response;
+        try {
+            response = await fetch(`${TESLA_API_BASE}/api/1/vehicles`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${config.apiToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        } catch (fetchError) {
+            console.error('获取车辆列表的 Fetch 错误:', fetchError);
+            throw new Error(`网络请求失败: ${fetchError.message}`);
+        }
         
         if (!response.ok) {
-            throw new Error(`获取车辆列表失败: ${response.status}`);
+            const errorData = await response.text().catch(() => '无法读取错误信息');
+            throw new Error(`获取车辆列表失败: ${response.status} - ${errorData}`);
         }
         
         const data = await response.json();
@@ -577,16 +638,22 @@ async function fetchVehicleData() {
         
         updateConnectionStatus('connecting', '连接中...');
         
-        const response = await fetch(
-            `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`,
-            {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${config.apiToken}`,
-                    'Content-Type': 'application/json'
+        let response;
+        try {
+            response = await fetch(
+                `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`,
+                {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${config.apiToken}`,
+                        'Content-Type': 'application/json'
+                    }
                 }
-            }
-        );
+            );
+        } catch (fetchError) {
+            console.error('获取车辆数据的 Fetch 错误:', fetchError);
+            throw new Error(`网络请求失败: ${fetchError.message}`);
+        }
         
         if (response.status === 401) {
             // Token 过期，尝试刷新
@@ -595,7 +662,8 @@ async function fetchVehicleData() {
         }
         
         if (!response.ok) {
-            throw new Error(`API 错误: ${response.status} ${response.statusText}`);
+            const errorData = await response.text().catch(() => response.statusText);
+            throw new Error(`API 错误: ${response.status} - ${errorData}`);
         }
         
         const data = await response.json();
