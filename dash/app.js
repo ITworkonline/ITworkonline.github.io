@@ -271,15 +271,23 @@ function startOAuthLogin() {
             return;
         }
         
-        // 保存配置（包括 clientSecret）
+        // 获取并验证 Client Secret
         const clientSecret = document.getElementById('clientSecret').value.trim();
+        if (!clientSecret) {
+            alert('请先填写 Client Secret！\n\n这是必需的，用于 OAuth 认证。');
+            updateOAuthStatus('error', '请先填写 Client Secret');
+            document.getElementById('clientSecret').focus();
+            return;
+        }
+        
+        // 保存配置（包括 clientSecret）
         config.clientId = clientId;
         config.clientSecret = clientSecret;
         config.redirectUri = redirectUri;
         localStorage.setItem('teslaDashConfig', JSON.stringify(config));
         
         console.log('已保存配置 - Client ID:', clientId.substring(0, 10) + '...');
-        console.log('已保存配置 - Client Secret:', clientSecret ? '已设置' : '未设置');
+        console.log('已保存配置 - Client Secret:', clientSecret ? '已设置（长度: ' + clientSecret.length + '）' : '未设置');
         
         // 生成 state 参数（用于防止 CSRF 攻击）
         const state = generateRandomString(32);
