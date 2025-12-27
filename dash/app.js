@@ -55,16 +55,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // 检查 URL 中是否有 OAuth 回调参数
-    handleOAuthCallback();
+    // 检查 URL 中是否有 OAuth 回调参数（延迟执行，确保 DOM 已加载）
+    setTimeout(() => {
+        handleOAuthCallback();
+    }, 100);
     
-    // 如果有 token，开始更新
-    if (config.apiToken && config.vehicleId) {
-        // 检查 token 是否过期
-        if (isTokenExpired()) {
-            refreshAccessToken();
-        } else {
-            startUpdates();
+    // 如果有 token，开始更新（但不在 OAuth 回调时）
+    const urlParams = new URLSearchParams(window.location.search);
+    if (!urlParams.get('code') && !urlParams.get('error')) {
+        if (config.apiToken && config.vehicleId) {
+            // 检查 token 是否过期
+            if (isTokenExpired()) {
+                refreshAccessToken();
+            } else {
+                startUpdates();
+            }
         }
     }
     
@@ -321,6 +326,15 @@ async function handleOAuthCallback() {
     const state = urlParams.get('state');
     const error = urlParams.get('error');
     
+    // 如果有 OAuth 回调参数，自动打开配置面板
+    if (code || state || error) {
+        // 确保配置面板是打开的
+        const configPanel = document.getElementById('configPanel');
+        if (configPanel && !configPanel.classList.contains('show')) {
+            configPanel.classList.add('show');
+        }
+    }
+    
     if (error) {
         updateOAuthStatus('error', `授权失败: ${error}`);
         // 清理 URL 参数
@@ -346,18 +360,37 @@ async function handleOAuthCallback() {
     updateOAuthStatus('loading', '正在获取访问令牌...');
     
     try {
-        // 确保获取 clientSecret
+        // 重新加载配置，确保获取最新的 clientSecret
+        const savedConfig = localStorage.getItem('teslaDashConfig');
+        if (savedConfig) {
+            const saved = JSON.parse(savedConfig);
+            config = { ...config, ...saved };
+        }
+        
+        // 确保获取 clientSecret（优先从配置，然后从输入框）
         let clientSecret = config.clientSecret;
         if (!clientSecret) {
-            clientSecret = document.getElementById('clientSecret').value.trim();
-            if (clientSecret) {
-                config.clientSecret = clientSecret;
-                localStorage.setItem('teslaDashConfig', JSON.stringify(config));
+            const secretInput = document.getElementById('clientSecret');
+            if (secretInput) {
+                clientSecret = secretInput.value.trim();
+                if (clientSecret) {
+                    config.clientSecret = clientSecret;
+                    localStorage.setItem('teslaDashConfig', JSON.stringify(config));
+                }
             }
         }
         
+        // 验证必要的配置
+        if (!config.clientId) {
+            throw new Error('Client ID 未设置，请先填写并保存配置');
+        }
+        
         if (!clientSecret) {
-            throw new Error('Client Secret 未设置，请先填写并保存配置');
+            throw new Error('Client Secret 未设置！\n\n请在配置面板中填写 Client Secret，然后点击"保存配置"，再重新尝试登录。');
+        }
+        
+        if (!config.redirectUri) {
+            throw new Error('Redirect URI 未设置，请先填写并保存配置');
         }
         
         console.log('交换 token - Client ID:', config.clientId ? config.clientId.substring(0, 10) + '...' : '未设置');
@@ -420,7 +453,38 @@ async function handleOAuthCallback() {
         
     } catch (error) {
         console.error('OAuth 回调处理失败:', error);
-        updateOAuthStatus('error', `错误: ${error.message}`);
+        
+        // 确保配置面板是打开的
+        const configPanel = document.getElementById('configPanel');
+        if (configPanel && !configPanel.classList.contains('show')) {
+            configPanel.classList.add('show');
+        }
+        
+        // 显示详细的错误信息
+        let errorMessage = error.message;
+        if (errorMessage.includes('unauthorized_client')) {
+            errorMessage = 'Client ID 和 Client Secret 组合无效。\n\n请检查：\n1. Client Secret 是否正确填写\n2. Client ID 和 Client Secret 是否匹配\n3. 是否在 Tesla 开发者平台中正确配置';
+        }
+        
+        updateOAuthStatus('error', `错误: ${errorMessage}`);
+        
+        // 如果是 Client Secret 相关错误，聚焦到输入框
+        if (errorMessage.includes('Client Secret')) {
+            const secretInput = document.getElementById('clientSecret');
+            if (secretInput) {
+                secretInput.focus();
+                // 高亮显示输入框
+                secretInput.style.borderColor = '#ff0000';
+                secretInput.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.5)';
+                setTimeout(() => {
+                    secretInput.style.borderColor = '';
+                    secretInput.style.boxShadow = '';
+                }, 3000);
+            }
+        }
+        
+        // 清理 URL 参数
+        window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
 
