@@ -271,10 +271,15 @@ function startOAuthLogin() {
             return;
         }
         
-        // 保存配置
+        // 保存配置（包括 clientSecret）
+        const clientSecret = document.getElementById('clientSecret').value.trim();
         config.clientId = clientId;
+        config.clientSecret = clientSecret;
         config.redirectUri = redirectUri;
         localStorage.setItem('teslaDashConfig', JSON.stringify(config));
+        
+        console.log('已保存配置 - Client ID:', clientId.substring(0, 10) + '...');
+        console.log('已保存配置 - Client Secret:', clientSecret ? '已设置' : '未设置');
         
         // 生成 state 参数（用于防止 CSRF 攻击）
         const state = generateRandomString(32);
@@ -333,19 +338,48 @@ async function handleOAuthCallback() {
     updateOAuthStatus('loading', '正在获取访问令牌...');
     
     try {
+        // 确保获取 clientSecret
+        let clientSecret = config.clientSecret;
+        if (!clientSecret) {
+            clientSecret = document.getElementById('clientSecret').value.trim();
+            if (clientSecret) {
+                config.clientSecret = clientSecret;
+                localStorage.setItem('teslaDashConfig', JSON.stringify(config));
+            }
+        }
+        
+        if (!clientSecret) {
+            throw new Error('Client Secret 未设置，请先填写并保存配置');
+        }
+        
+        console.log('交换 token - Client ID:', config.clientId ? config.clientId.substring(0, 10) + '...' : '未设置');
+        console.log('交换 token - Client Secret:', clientSecret ? '已设置（长度: ' + clientSecret.length + '）' : '未设置');
+        console.log('交换 token - Code:', code ? code.substring(0, 10) + '...' : '未设置');
+        console.log('交换 token - Redirect URI:', config.redirectUri);
+        
         // 交换 access token
+        const tokenParams = new URLSearchParams({
+            grant_type: 'authorization_code',
+            client_id: config.clientId,
+            client_secret: clientSecret,
+            code: code,
+            redirect_uri: config.redirectUri
+        });
+        
+        console.log('Token 请求参数:', {
+            grant_type: 'authorization_code',
+            client_id: config.clientId ? config.clientId.substring(0, 10) + '...' : '未设置',
+            client_secret: '***',
+            code: code ? code.substring(0, 10) + '...' : '未设置',
+            redirect_uri: config.redirectUri
+        });
+        
         const response = await fetch(`${TESLA_AUTH_BASE}/oauth2/v3/token`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: new URLSearchParams({
-                grant_type: 'authorization_code',
-                client_id: config.clientId,
-                client_secret: config.clientSecret || document.getElementById('clientSecret').value.trim(),
-                code: code,
-                redirect_uri: config.redirectUri
-            })
+            body: tokenParams
         });
         
         if (!response.ok) {
