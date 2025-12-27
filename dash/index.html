@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Tesla 速度仪表盘</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- 状态指示器 -->
+        <div class="status-bar">
+            <div class="status-indicator" id="connectionStatus">
+                <span class="status-dot"></span>
+                <span class="status-text">连接中...</span>
+            </div>
+            <div class="last-update" id="lastUpdate"></div>
+        </div>
+
+        <!-- 主速度显示 -->
+        <div class="speed-display">
+            <div class="speed-value" id="speedValue">0</div>
+            <div class="speed-unit">mph</div>
+        </div>
+
+        <!-- 速度表盘 -->
+        <div class="speedometer">
+            <svg class="speedometer-svg" viewBox="0 0 400 200">
+                <!-- 背景弧线 -->
+                <path class="speedometer-track" d="M 50 150 A 150 150 0 0 1 350 150" 
+                      fill="none" stroke="#1a1a1a" stroke-width="20"/>
+                
+                <!-- 速度弧线 -->
+                <path class="speedometer-fill" id="speedArc" 
+                      d="M 50 150 A 150 150 0 0 1 350 150" 
+                      fill="none" stroke="#00ff00" stroke-width="20" 
+                      stroke-linecap="round" stroke-dasharray="471" stroke-dashoffset="471"/>
+                
+                <!-- 刻度线 -->
+                <g class="speedometer-ticks" id="speedTicks"></g>
+                
+                <!-- 指针 -->
+                <line class="speedometer-needle" id="speedNeedle" 
+                      x1="200" y1="150" x2="200" y2="50" 
+                      stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+        </div>
+
+        <!-- 附加信息 -->
+        <div class="info-panel">
+            <div class="info-item">
+                <div class="info-label">电池电量</div>
+                <div class="info-value" id="batteryLevel">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">充电状态</div>
+                <div class="info-value" id="chargingState">--</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">里程</div>
+                <div class="info-value" id="odometer">--</div>
+            </div>
+        </div>
+
+        <!-- 配置面板（初始隐藏） -->
+        <div class="config-panel" id="configPanel">
+            <h3>配置</h3>
+            
+            <!-- OAuth 配置部分 -->
+            <div class="config-section">
+                <h4>OAuth 配置</h4>
+                <div class="config-item">
+                    <label for="clientId">Client ID:</label>
+                    <input type="text" id="clientId" placeholder="输入 OAuth Client ID">
+                </div>
+                <div class="config-item">
+                    <label for="clientSecret">Client Secret:</label>
+                    <input type="password" id="clientSecret" placeholder="输入 OAuth Client Secret">
+                </div>
+                <div class="config-item">
+                    <label for="redirectUri">Redirect URI:</label>
+                    <input type="text" id="redirectUri" placeholder="输入回调 URL（必须与 Tesla 平台中设置的一致）">
+                    <small class="config-hint">必须与 Tesla 开发者平台中设置的 Redirect URI 完全一致（包括协议、域名、路径）</small>
+                </div>
+                <button class="btn-login" onclick="startOAuthLogin()">🔐 登录 Tesla</button>
+                <div id="oauthStatus" class="oauth-status"></div>
+            </div>
+
+            <div class="config-divider"></div>
+
+            <!-- 手动配置部分（备用） -->
+            <div class="config-section">
+                <h4>手动配置（可选）</h4>
+                <div class="config-item">
+                    <label for="apiToken">Access Token:</label>
+                    <input type="password" id="apiToken" placeholder="已有 Token 可直接输入">
+                </div>
+                <div class="config-item">
+                    <label for="vehicleId">Vehicle ID:</label>
+                    <input type="text" id="vehicleId" placeholder="输入车辆 ID">
+                    <button class="btn-fetch-vehicles" onclick="fetchVehicles()" style="margin-top: 8px; width: 100%;">获取车辆列表</button>
+                </div>
+            </div>
+
+            <div class="config-divider"></div>
+
+            <!-- 其他设置 -->
+            <div class="config-section">
+                <h4>其他设置</h4>
+                <div class="config-item">
+                    <label for="updateInterval">更新间隔 (秒):</label>
+                    <input type="number" id="updateInterval" value="2" min="1" max="10">
+                </div>
+            </div>
+
+            <button class="btn-save" onclick="saveConfig()">保存配置</button>
+            <button class="btn-close" onclick="toggleConfig()">关闭</button>
+        </div>
+
+        <!-- 配置按钮 -->
+        <button class="btn-config" onclick="toggleConfig()">⚙️</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
