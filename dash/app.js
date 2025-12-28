@@ -1253,6 +1253,20 @@ async function fetchVehicleData() {
         console.log('✅ Response 对象是 vehicle_data:', data.response);
         console.log('Response 对象的键:', Object.keys(data.response));
         
+        // 再次验证（双重检查）- 在调用 updateDashboard 之前
+        const finalCheckKeys = Object.keys(data.response);
+        const finalIsVehicleData = finalCheckKeys.some(key => 
+            ['drive_state', 'charge_state', 'vehicle_state', 'climate_state'].includes(key)
+        );
+        
+        if (!finalIsVehicleData) {
+            console.error('❌ 最终验证失败：响应仍然不是 vehicle_data');
+            console.error('响应键:', finalCheckKeys);
+            const errorMsg = `API 返回了错误的响应格式。\n\n获取到的是车辆列表对象，而不是 vehicle_data。\n\n可能的原因：\n1. Vehicle ID 不正确: ${config.vehicleId}\n2. API 端点错误\n3. 代理服务器返回了错误的响应\n\n请检查 Vehicle ID 是否正确，或使用 Fleet Telemetry 获取速度数据。`;
+            updateConnectionStatus('error', errorMsg);
+            throw new Error('API 返回了错误的响应格式');
+        }
+        
         // 检查 drive_state
         if (data.response.drive_state) {
             console.log('✅ drive_state 存在:', data.response.drive_state);
