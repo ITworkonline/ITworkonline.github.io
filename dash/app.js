@@ -906,9 +906,12 @@ async function fetchVehicleData() {
         updateConnectionStatus('connecting', '连接中...');
         
         // 构建 API URL（使用代理或直接调用）
+        // 添加 endpoints 参数以获取 drive_state 数据
+        const baseUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`;
+        const urlWithParams = `${baseUrl}?endpoints=drive_state`;
         const apiUrl = config.proxyUrl 
-            ? `${config.proxyUrl}?url=${encodeURIComponent(`${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`)}`
-            : `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`;
+            ? `${config.proxyUrl}?url=${encodeURIComponent(urlWithParams)}`
+            : urlWithParams;
         
         let response;
         try {
