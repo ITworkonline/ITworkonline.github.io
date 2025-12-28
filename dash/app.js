@@ -1048,7 +1048,15 @@ async function fetchSpeedFromTelemetry() {
     }
     
     try {
-        const url = `${config.telemetryUrl}/api/vehicle/${config.vin}`;
+        // 确保 URL 格式正确（添加 https:// 如果缺失）
+        let telemetryUrl = config.telemetryUrl.trim();
+        if (!telemetryUrl.startsWith('http://') && !telemetryUrl.startsWith('https://')) {
+            telemetryUrl = 'https://' + telemetryUrl;
+        }
+        // 移除末尾的斜杠
+        telemetryUrl = telemetryUrl.replace(/\/$/, '');
+        
+        const url = `${telemetryUrl}/api/vehicle/${config.vin}`;
         const response = await fetch(url, {
             method: 'GET',
             headers: {
