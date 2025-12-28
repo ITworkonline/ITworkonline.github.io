@@ -1117,25 +1117,6 @@ async function fetchVehicleData() {
                 console.warn('⚠️ 从 Telemetry 获取速度失败，尝试使用 Fleet API');
             }
         }
-                    window.telemetryUpdateCount++;
-                    
-                    if (window.telemetryUpdateCount >= 5) {
-                        window.telemetryUpdateCount = 0;
-                        // 异步获取其他数据，不阻塞速度更新
-                        fetchOtherVehicleData().catch(err => {
-                            console.warn('获取其他车辆数据失败:', err);
-                        });
-                    }
-                }
-                
-                updateConnectionStatus('connected', '已连接 (Telemetry)');
-                updateLastUpdateTime();
-                if (updateTimer) {
-                    updateControlButtons(true);
-                }
-                return;
-            }
-        }
         
         // 如果没有 Telemetry 或获取失败，使用原来的 Fleet API 方法
         // 检查 token 是否过期
@@ -1264,12 +1245,24 @@ async function fetchVehicleData() {
             console.error('❌ 响应不是 vehicle_data，而是车辆列表对象:', data.response);
             console.error('响应键:', responseKeys);
             console.error('完整响应:', JSON.stringify(data, null, 2));
+            console.error('请求的 URL:', apiUrl);
+            console.error('使用的 Vehicle ID:', config.vehicleId);
             
             // 如果响应是车辆列表对象，说明 API 端点可能有问题
             // 或者代理返回了错误的响应
-            const errorMsg = `获取到的是车辆列表对象，而不是 vehicle_data。\n\n可能的原因：\n1. API 端点错误\n2. 代理服务器返回了错误的响应\n3. vehicleId 不正确\n\n响应键: ${responseKeys.join(', ')}\n\n请检查：\n- Vehicle ID 是否正确\n- 代理服务器是否正常工作\n- API URL 是否正确`;
-            updateConnectionStatus('error', errorMsg);
-            throw new Error(errorMsg);
+            // 尝试使用不同的端点格式
+            console.warn('⚠️ 尝试使用备用端点格式...');
+            
+            // 备用方案：如果 vehicle_data 端点返回错误，尝试直接使用各个单独的端点
+            // 但首先，我们需要检查是否是代理服务器的问题
+            const errorMsg = `API 返回了车辆列表对象而不是 vehicle_data。\n\n这通常意味着：\n1. Vehicle ID 可能不正确（当前: ${config.vehicleId}）\n2. API 端点格式可能有问题\n3. 代理服务器可能返回了错误的响应\n\n建议：\n- 优先使用 Fleet Telemetry 获取速度数据\n- 检查 Vehicle ID 是否正确\n- 如果必须使用 Fleet API，请检查 API 文档`;
+            
+            // 不抛出错误，而是记录警告，让 Telemetry 继续工作
+            console.warn(errorMsg);
+            updateConnectionStatus('warning', errorMsg);
+            
+            // 返回 null，让调用者知道获取失败
+            return null;
         }
         
         // 调试：输出 response 对象的结构
@@ -1345,7 +1338,15 @@ async function fetchVehicleData() {
         
         if (!hasVehicleDataFields) {
             console.error('❌ 验证失败：响应仍然不是 vehicle_data');
-            throw new Error('API 返回了错误的响应格式');
+            console.error('响应键:', finalKeys);
+            console.error('请求的 URL:', apiUrl);
+            console.error('使用的 Vehicle ID:', config.vehicleId);
+            
+            // 如果最终验证失败，返回 null 而不是抛出错误
+            // 这样可以让 Telemetry 继续工作
+            const errorMsg = `API 返回了错误的响应格式。\n\n获取到的是车辆列表对象，而不是 vehicle_data。\n\nVehicle ID: ${config.vehicleId}\n\n建议：\n- 优先使用 Fleet Telemetry 获取速度数据\n- 检查 Vehicle ID 是否正确\n- 如果必须使用 Fleet API，请检查 API 文档`;
+            updateConnectionStatus('warning', errorMsg);
+            return null; // 返回 null 而不是抛出错误
         }
         
         updateDashboard(data.response);
@@ -1358,7 +1359,15 @@ async function fetchVehicleData() {
         
     } catch (error) {
         console.error('获取车辆数据失败:', error);
-        updateConnectionStatus('error', `错误: ${error.message}`);
+        
+        // 如果配置了 Telemetry，即使 Fleet API 失败也不要显示错误
+        // 因为 Telemetry 可能仍然在工作
+        if (config.telemetryUrl && config.vin) {
+            console.warn('⚠️ Fleet API 获取失败，但 Telemetry 可能仍在工作');
+            // 不更新状态，让 Telemetry 继续工作
+        } else {
+            updateConnectionStatus('error', `获取车辆数据失败: ${error.message}`);
+        }
     }
 }
 
