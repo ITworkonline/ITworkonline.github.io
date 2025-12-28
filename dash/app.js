@@ -11,7 +11,8 @@ let config = {
     refreshToken: '',
     tokenExpiresAt: 0,
     vehicleId: '',
-    updateInterval: 2
+    updateInterval: 2,
+    proxyUrl: '' // CORS 代理 URL（可选）
 };
 
 let updateTimer = null;
@@ -96,6 +97,10 @@ function loadConfig() {
         document.getElementById('apiToken').value = config.apiToken || '';
         document.getElementById('vehicleId').value = config.vehicleId || '';
         document.getElementById('updateInterval').value = config.updateInterval || 2;
+        const proxyInput = document.getElementById('proxyUrl');
+        if (proxyInput) {
+            proxyInput.value = config.proxyUrl || '';
+        }
     }
 }
 
@@ -107,6 +112,10 @@ function saveConfig() {
     config.apiToken = document.getElementById('apiToken').value.trim();
     config.vehicleId = document.getElementById('vehicleId').value.trim();
     config.updateInterval = parseInt(document.getElementById('updateInterval').value) || 2;
+    const proxyInput = document.getElementById('proxyUrl');
+    if (proxyInput) {
+        config.proxyUrl = proxyInput.value.trim();
+    }
     
     localStorage.setItem('teslaDashConfig', JSON.stringify(config));
     
@@ -512,8 +521,10 @@ async function handleOAuthCallback() {
         let errorMessage = error.message;
         
         // 处理不同类型的错误
-        if (errorMessage.includes('Failed to fetch') || errorMessage.includes('网络请求失败')) {
-            errorMessage = '网络连接失败\n\n可能的原因：\n1. 网络连接问题\n2. Tesla API 服务器暂时不可用\n3. 防火墙或代理设置阻止了请求\n4. 浏览器安全策略限制\n\n请检查：\n- 网络连接是否正常\n- 是否能访问 https://auth.tesla.com\n- 浏览器控制台是否有更多错误信息';
+        if (errorMessage.includes('CORS') || errorMessage.includes('Access-Control-Allow-Origin')) {
+            errorMessage = 'CORS 错误：Tesla API 不允许直接从浏览器调用\n\n解决方案：\n1. 配置 CORS 代理服务器（推荐）\n   - 在配置面板的"其他设置"中填写"CORS 代理 URL"\n   - 可以使用 Vercel/Netlify 等免费服务部署代理\n   - 详细说明请查看 CORS_SOLUTION.md 文件\n\n2. 或者使用后端服务器处理 API 请求';
+        } else if (errorMessage.includes('Failed to fetch') || errorMessage.includes('网络请求失败')) {
+            errorMessage = '网络连接失败\n\n可能的原因：\n1. 网络连接问题\n2. Tesla API 服务器暂时不可用\n3. 防火墙或代理设置阻止了请求\n4. 浏览器安全策略限制\n\n请检查：\n- 网络连接是否正常\n- 是否能访问 https://auth.tesla.com\n- 是否配置了 CORS 代理 URL\n- 浏览器控制台是否有更多错误信息';
         } else if (errorMessage.includes('unauthorized_client')) {
             errorMessage = 'Client ID 和 Client Secret 组合无效\n\n请检查：\n1. Client Secret 是否正确填写\n2. Client ID 和 Client Secret 是否匹配\n3. 是否在 Tesla 开发者平台中正确配置';
         } else if (errorMessage.includes('CORS')) {
@@ -552,15 +563,29 @@ async function fetchVehicles() {
     try {
         updateOAuthStatus('loading', '正在获取车辆列表...');
         
+        // 构建 API URL（使用代理或直接调用）
+        const apiUrl = config.proxyUrl 
+            ? `${config.proxyUrl}?url=${encodeURIComponent(`${TESLA_API_BASE}/api/1/vehicles`)}`
+            : `${TESLA_API_BASE}/api/1/vehicles`;
+        
         let response;
         try {
-            response = await fetch(`${TESLA_API_BASE}/api/1/vehicles`, {
+            const fetchOptions = {
                 method: 'GET',
                 headers: {
                     'Authorization': `Bearer ${config.apiToken}`,
                     'Content-Type': 'application/json'
                 }
-            });
+            };
+            
+            // 如果使用代理，可能需要不同的请求格式
+            if (config.proxyUrl) {
+                // 代理服务器应该转发 Authorization 头
+                response = await fetch(apiUrl, fetchOptions);
+            } else {
+                // 直接调用（可能被 CORS 阻止）
+                response = await fetch(apiUrl, fetchOptions);
+            }
         } catch (fetchError) {
             console.error('获取车辆列表的 Fetch 错误:', fetchError);
             throw new Error(`网络请求失败: ${fetchError.message}`);
@@ -638,18 +663,29 @@ async function fetchVehicleData() {
         
         updateConnectionStatus('connecting', '连接中...');
         
+        // 构建 API URL（使用代理或直接调用）
+        const apiUrl = config.proxyUrl 
+            ? `${config.proxyUrl}?url=${encodeURIComponent(`${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`)}`
+            : `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`;
+        
         let response;
         try {
-            response = await fetch(
-                `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`,
-                {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${config.apiToken}`,
-                        'Content-Type': 'application/json'
-                    }
+            const fetchOptions = {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${config.apiToken}`,
+                    'Content-Type': 'application/json'
                 }
-            );
+            };
+            
+            // 如果使用代理，可能需要不同的请求格式
+            if (config.proxyUrl) {
+                // 代理服务器应该转发 Authorization 头
+                response = await fetch(apiUrl, fetchOptions);
+            } else {
+                // 直接调用（可能被 CORS 阻止）
+                response = await fetch(apiUrl, fetchOptions);
+            }
         } catch (fetchError) {
             console.error('获取车辆数据的 Fetch 错误:', fetchError);
             throw new Error(`网络请求失败: ${fetchError.message}`);
