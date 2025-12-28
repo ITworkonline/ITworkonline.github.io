@@ -912,6 +912,74 @@ function generateRandomString(length) {
     return result;
 }
 
+// 检查 Fleet Telemetry 配置状态
+async function checkFleetTelemetryStatus() {
+    if (!config.apiToken || !config.vehicleId) {
+        throw new Error('请先登录并选择车辆');
+    }
+    
+    const url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
+    const apiUrl = config.proxyUrl 
+        ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
+        : url;
+    
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${config.apiToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.text().catch(() => response.statusText);
+            throw new Error(`获取配置状态失败: ${response.status} - ${errorData}`);
+        }
+        
+        const data = await response.json();
+        console.log('Fleet Telemetry 配置状态:', data);
+        return data;
+    } catch (error) {
+        console.error('获取配置状态失败:', error);
+        throw error;
+    }
+}
+
+// 获取 Fleet Telemetry 错误日志
+async function getFleetTelemetryErrors() {
+    if (!config.apiToken || !config.vehicleId) {
+        throw new Error('请先登录并选择车辆');
+    }
+    
+    const url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_errors`;
+    const apiUrl = config.proxyUrl 
+        ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
+        : url;
+    
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${config.apiToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.text().catch(() => response.statusText);
+            throw new Error(`获取错误日志失败: ${response.status} - ${errorData}`);
+        }
+        
+        const data = await response.json();
+        console.log('Fleet Telemetry 错误日志:', data);
+        return data;
+    } catch (error) {
+        console.error('获取错误日志失败:', error);
+        throw error;
+    }
+}
+
 // 配置 Fleet Telemetry（通过 API 命令）
 async function configureFleetTelemetry() {
     if (!config.apiToken || !config.vehicleId) {
@@ -1389,6 +1457,52 @@ function updateDashboard(vehicleData) {
     
     console.log('最终使用的速度值:', speed, 'km/h');
     updateSpeed(speed);
+    
+    // 更新电池信息
+    const chargeState = vehicleData.charge_state;
+    if (chargeState) {
+        const batteryLevel = chargeState.battery_level || 0;
+        const chargingState = chargeState.charging_state || 'Unknown';
+        
+        document.getElementById('batteryValue').textContent = Math.round(batteryLevel);
+    }
+    
+    // 更新里程
+    const odometer = vehicleData.vehicle_state?.odometer;
+    if (odometer) {
+        document.getElementById('odometerValue').textContent = `${odometer.toFixed(1)} km`;
+    }
+}
+
+// 检查 Telemetry 状态（UI 调用）
+async function checkTelemetryStatus() {
+    try {
+        updateOAuthStatus('loading', '正在检查 Fleet Telemetry 状态...');
+        
+        const status = await checkFleetTelemetryStatus();
+        
+        if (status.response) {
+            const synced = status.response.synced;
+            const websocketUrl = status.response.websocket_url;
+            const fields = status.response.fields || [];
+            
+            let message = `Fleet Telemetry 配置状态:\n\n`;
+            message += `同步状态: ${synced ? '✅ 已同步' : '⏳ 未同步'}\n`;
+            message += `WebSocket URL: ${websocketUrl || '未配置'}\n`;
+            message += `订阅字段: ${fields.length > 0 ? fields.join(', ') : '无'}\n`;
+            
+            if (synced) {
+                updateOAuthStatus('success', message);
+            } else {
+                updateOAuthStatus('warning', message + '\n\n请等待车辆处理配置。');
+            }
+        } else {
+            updateOAuthStatus('error', '无法获取配置状态');
+        }
+    } catch (error) {
+        console.error('检查状态失败:', error);
+        updateOAuthStatus('error', `检查状态失败: ${error.message}`);
+    }
 }
 
 // 设置 Fleet Telemetry（UI 调用）
