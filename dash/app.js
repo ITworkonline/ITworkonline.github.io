@@ -390,6 +390,12 @@ async function registerPartnerAccount() {
 
 // 刷新 access token
 async function refreshAccessToken() {
+    // 如果定时器已停止，不刷新 token
+    if (!updateTimer) {
+        console.log('refreshAccessToken: 定时器已停止，取消 token 刷新');
+        return;
+    }
+    
     if (!config.refreshToken || !config.clientId || !config.clientSecret) {
         updateConnectionStatus('error', '缺少刷新 token 或 OAuth 配置');
         return;
