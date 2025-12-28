@@ -1068,36 +1068,6 @@ function updateSpeed(speed) {
         `0 0 10px ${color}80, 0 0 20px ${color}60, 0 0 30px ${color}40, 0 0 40px ${color}20`;
 }
 
-// 更新速度表盘
-function updateSpeedometer(speed) {
-    // 计算角度 (-135 到 135 度)
-    const maxSpeed = speedometerMaxSpeed;
-    const percentage = Math.min(speed / maxSpeed, 1);
-    const angle = -135 + (percentage * 270);
-    
-    // 更新指针
-    const needle = document.getElementById('speedNeedle');
-    needle.setAttribute('transform', `rotate(${angle} 200 150)`);
-    
-    // 更新弧线
-    const circumference = Math.PI * 150; // 半圆周长
-    const offset = circumference * (1 - percentage);
-    const speedArc = document.getElementById('speedArc');
-    speedArc.setAttribute('stroke-dashoffset', offset);
-    
-    // 根据速度改变颜色
-    let color = '#00ff00'; // 绿色
-    if (speed > 120) {
-        color = '#ff0000'; // 红色
-    } else if (speed > 80) {
-        color = '#ffaa00'; // 橙色
-    }
-    
-    speedArc.setAttribute('stroke', color);
-    document.getElementById('speedValue').style.color = color;
-    document.getElementById('speedValue').style.textShadow = 
-        `0 0 20px ${color}80, 0 0 40px ${color}50`;
-}
 
 // 更新连接状态
 function updateConnectionStatus(status, message) {
