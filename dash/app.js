@@ -215,6 +215,94 @@ function isTokenExpired() {
     return Date.now() >= config.tokenExpiresAt - 60000; // 提前 1 分钟刷新
 }
 
+// 获取 Partner Authentication Token (使用 client_credentials)
+async function getPartnerToken() {
+    if (!config.clientId || !config.clientSecret) {
+        throw new Error('缺少 Client ID 或 Client Secret');
+    }
+
+    // 检查 token 是否过期
+    if (config.partnerToken && config.partnerTokenExpiresAt && Date.now() < config.partnerTokenExpiresAt - 60000) {
+        return config.partnerToken;
+    }
+
+    try {
+        console.log('获取 Partner Authentication Token...');
+        const response = await fetch(`${TESLA_AUTH_BASE}/oauth2/v3/token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                grant_type: 'client_credentials',
+                client_id: config.clientId,
+                client_secret: config.clientSecret,
+                audience: TESLA_API_BASE
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.text().catch(() => '无法读取错误信息');
+            throw new Error(`获取 Partner Token 失败: ${response.status} - ${errorData}`);
+        }
+
+        const data = await response.json();
+        config.partnerToken = data.access_token;
+        config.partnerTokenExpiresAt = Date.now() + (data.expires_in * 1000);
+        
+        localStorage.setItem('teslaDashConfig', JSON.stringify(config));
+        console.log('Partner Token 获取成功');
+        
+        return config.partnerToken;
+    } catch (error) {
+        console.error('获取 Partner Token 失败:', error);
+        throw error;
+    }
+}
+
+// 注册账户到区域
+async function registerPartnerAccount() {
+    try {
+        console.log('注册账户到区域...');
+        
+        // 获取 Partner Token
+        const partnerToken = await getPartnerToken();
+        
+        // 重新加载配置，确保获取最新的 proxyUrl
+        const savedConfig = localStorage.getItem('teslaDashConfig');
+        if (savedConfig) {
+            const saved = JSON.parse(savedConfig);
+            config = { ...config, ...saved };
+        }
+        
+        // 构建 API URL（使用代理或直接调用）
+        const apiUrl = config.proxyUrl 
+            ? `${config.proxyUrl}?url=${encodeURIComponent(`${TESLA_API_BASE}/api/1/partner_accounts`)}`
+            : `${TESLA_API_BASE}/api/1/partner_accounts`;
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${partnerToken}`,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.text().catch(() => '无法读取错误信息');
+            throw new Error(`注册账户失败: ${response.status} - ${errorData}`);
+        }
+
+        const data = await response.json();
+        console.log('账户注册成功:', data);
+        return data;
+    } catch (error) {
+        console.error('注册账户失败:', error);
+        throw error;
+    }
+}
+
 // 刷新 access token
 async function refreshAccessToken() {
     if (!config.refreshToken || !config.clientId || !config.clientSecret) {
