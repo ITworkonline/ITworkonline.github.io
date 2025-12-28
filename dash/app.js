@@ -909,7 +909,8 @@ async function fetchVehicleData() {
         // Tesla Fleet API 需要 endpoints 参数来指定要返回的数据
         // 可以指定多个 endpoints，用逗号分隔
         const baseUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`;
-        const urlWithParams = `${baseUrl}?endpoints=drive_state,charge_state,vehicle_state,climate_state`;
+        // 尝试请求所有可用的 endpoints
+        const urlWithParams = `${baseUrl}?endpoints=drive_state,charge_state,vehicle_state,climate_state,gui_settings,vehicle_config`;
         const apiUrl = config.proxyUrl 
             ? `${config.proxyUrl}?url=${encodeURIComponent(urlWithParams)}`
             : urlWithParams;
