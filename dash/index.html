@@ -20,7 +20,17 @@
                 <span class="status-dot"></span>
                 <span class="status-text">连接中...</span>
             </div>
-            <div class="last-update" id="lastUpdate"></div>
+            <div class="status-controls">
+                <button class="btn-stop" id="stopBtn" onclick="toggleUpdates()" style="display: none;">
+                    <span class="btn-icon">⏸</span>
+                    <span class="btn-text">停止读取</span>
+                </button>
+                <button class="btn-start" id="startBtn" onclick="toggleUpdates()" style="display: none;">
+                    <span class="btn-icon">▶</span>
+                    <span class="btn-text">开始读取</span>
+                </button>
+                <div class="last-update" id="lastUpdate"></div>
+            </div>
         </div>
 
         <!-- 主速度显示 -->
@@ -30,7 +40,7 @@
                 <span class="speed-digit">0</span>
             </div>
             <div class="speed-unit">
-                <span class="unit-text">mph</span>
+                <span class="unit-text">km/h</span>
                 <div class="unit-line"></div>
             </div>
         </div>

@@ -207,6 +207,44 @@ function startUpdates() {
     updateTimer = setInterval(() => {
         fetchVehicleData();
     }, config.updateInterval * 1000);
+    
+    // 更新按钮状态
+    updateControlButtons(true);
+}
+
+// 停止更新
+function stopUpdates() {
+    if (updateTimer) {
+        clearInterval(updateTimer);
+        updateTimer = null;
+    }
+    
+    // 更新按钮状态
+    updateControlButtons(false);
+    updateConnectionStatus('paused', '已暂停读取');
+}
+
+// 切换更新状态
+function toggleUpdates() {
+    if (updateTimer) {
+        stopUpdates();
+    } else {
+        startUpdates();
+    }
+}
+
+// 更新控制按钮显示状态
+function updateControlButtons(isRunning) {
+    const stopBtn = document.getElementById('stopBtn');
+    const startBtn = document.getElementById('startBtn');
+    
+    if (isRunning) {
+        stopBtn.style.display = 'flex';
+        startBtn.style.display = 'none';
+    } else {
+        stopBtn.style.display = 'none';
+        startBtn.style.display = 'flex';
+    }
 }
 
 // 检查 token 是否过期
@@ -946,7 +984,7 @@ function updateDashboard(vehicleData) {
     // 更新里程
     const odometer = vehicleData.vehicle_state?.odometer;
     if (odometer) {
-        document.getElementById('odometer').textContent = `${odometer.toFixed(1)} miles`;
+        document.getElementById('odometer').textContent = `${odometer.toFixed(1)} km`;
     }
 }
 
@@ -998,6 +1036,13 @@ function updateConnectionStatus(status, message) {
     
     statusDot.className = 'status-dot';
     
+    // 根据状态更新按钮显示
+    if (status === 'connected' && updateTimer) {
+        updateControlButtons(true);
+    } else if (status === 'paused' || !updateTimer) {
+        updateControlButtons(false);
+    }
+    
     if (status === 'connected') {
         statusDot.classList.add('connected');
         statusText.textContent = '已连接';
@@ -1022,10 +1067,14 @@ document.addEventListener('visibilitychange', function() {
         if (updateTimer) {
             clearInterval(updateTimer);
             updateTimer = null;
+            updateControlButtons(false);
         }
     } else {
+        // 页面可见时，只有在之前有定时器运行的情况下才自动恢复
+        // 如果用户手动停止了，不会自动恢复
         if (!updateTimer && config.apiToken && config.vehicleId) {
-            startUpdates();
+            // 不自动恢复，让用户手动控制
+            // startUpdates();
         }
     }
 });
