@@ -906,12 +906,15 @@ async function fetchVehicleData() {
         updateConnectionStatus('connecting', '连接中...');
         
         // 构建 API URL（使用代理或直接调用）
-        // 添加 endpoints 参数以获取 drive_state 数据
+        // Tesla Fleet API 需要 endpoints 参数来指定要返回的数据
+        // 可以指定多个 endpoints，用逗号分隔
         const baseUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`;
-        const urlWithParams = `${baseUrl}?endpoints=drive_state`;
+        const urlWithParams = `${baseUrl}?endpoints=drive_state,charge_state,vehicle_state,climate_state`;
         const apiUrl = config.proxyUrl 
             ? `${config.proxyUrl}?url=${encodeURIComponent(urlWithParams)}`
             : urlWithParams;
+        
+        console.log('请求 URL:', apiUrl);
         
         let response;
         try {
