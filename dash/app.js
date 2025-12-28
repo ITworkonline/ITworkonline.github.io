@@ -1380,20 +1380,51 @@ async function setupTelemetry() {
         }
         
         // 配置 Telemetry
-        await configureFleetTelemetry();
+        const configResult = await configureFleetTelemetry();
         
-        updateOAuthStatus('success', '✅ Fleet Telemetry 配置成功！\n\n车辆现在会开始发送数据到服务器。\n请等待几秒钟后点击"开始读取"。');
+        // 等待 2 秒后检查状态
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // 3 秒后自动开始读取
+        // 检查配置状态
+        try {
+            const status = await checkFleetTelemetryStatus();
+            if (status.response) {
+                const synced = status.response.synced;
+                const websocketUrl = status.response.websocket_url;
+                
+                if (synced === true) {
+                    updateOAuthStatus('success', `✅ Fleet Telemetry 配置成功并已同步！\n\nWebSocket URL: ${websocketUrl}\n\n车辆现在会开始发送数据到服务器。\n请等待几秒钟后点击"开始读取"。`);
+                } else {
+                    updateOAuthStatus('warning', `⚠️ 配置已发送，但尚未同步。\n\n请等待车辆处理配置（可能需要几分钟）。\n\n你可以稍后点击"检查状态"按钮查看同步状态。`);
+                }
+            }
+        } catch (statusError) {
+            console.warn('检查配置状态失败:', statusError);
+            updateOAuthStatus('success', '✅ Fleet Telemetry 配置已发送！\n\n请等待车辆处理配置（可能需要几分钟）。\n\n如果遇到问题，可以查看错误日志。');
+        }
+        
+        // 5 秒后自动开始读取
         setTimeout(() => {
             if (!updateTimer) {
                 startUpdates();
             }
-        }, 3000);
+        }, 5000);
         
     } catch (error) {
         console.error('设置 Telemetry 失败:', error);
-        updateOAuthStatus('error', `配置失败: ${error.message}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）`);
+        
+        // 尝试获取错误日志
+        try {
+            const errors = await getFleetTelemetryErrors();
+            if (errors.response && errors.response.length > 0) {
+                const errorMessages = errors.response.map(e => e.message || e.error).join('\n');
+                updateOAuthStatus('error', `配置失败: ${error.message}\n\n错误详情:\n${errorMessages}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）\n4. 虚拟密钥是否已配对到车辆`);
+            } else {
+                updateOAuthStatus('error', `配置失败: ${error.message}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）\n4. 虚拟密钥是否已配对到车辆`);
+            }
+        } catch (errorLogError) {
+            updateOAuthStatus('error', `配置失败: ${error.message}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）\n4. 虚拟密钥是否已配对到车辆`);
+        }
     }
     
     // 更新电池信息
