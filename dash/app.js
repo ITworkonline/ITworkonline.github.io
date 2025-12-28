@@ -281,17 +281,39 @@ async function registerPartnerAccount() {
             ? `${config.proxyUrl}?url=${encodeURIComponent(targetUrl)}`
             : targetUrl;
         
+        // 从 redirectUri 提取域名（例如：https://blog.itworkonline.top/dash -> blog.itworkonline.top）
+        let domain = '';
+        try {
+            const redirectUriObj = new URL(config.redirectUri || window.location.origin);
+            domain = redirectUriObj.hostname;
+        } catch (e) {
+            // 如果无法解析，使用当前页面的域名
+            domain = window.location.hostname;
+        }
+        
+        console.log('注册账户 - 使用域名:', domain);
+        
+        // 构建请求体（包含 domain 参数）
+        const requestBody = {
+            domain: domain
+        };
+        
         const fetchOptions = {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${partnerToken}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
-            }
+            },
+            body: JSON.stringify(requestBody)
         };
         
-        // 如果使用代理，POST 请求体需要作为查询参数或通过其他方式传递
-        // 但我们的代理会转发所有 headers，所以应该可以工作
+        console.log('注册请求:', {
+            url: apiUrl,
+            method: 'POST',
+            body: requestBody
+        });
+        
         const response = await fetch(apiUrl, fetchOptions);
 
         if (!response.ok) {
