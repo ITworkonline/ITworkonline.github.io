@@ -311,7 +311,9 @@ async function registerPartnerAccount() {
         console.log('注册请求:', {
             url: apiUrl,
             method: 'POST',
-            body: requestBody
+            headers: fetchOptions.headers,
+            body: requestBody,
+            bodyString: JSON.stringify(requestBody)
         });
         
         const response = await fetch(apiUrl, fetchOptions);
