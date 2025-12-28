@@ -746,6 +746,30 @@ async function fetchVehicleData() {
         
         if (!response.ok) {
             const errorData = await response.text().catch(() => response.statusText);
+            let errorJson;
+            try {
+                errorJson = JSON.parse(errorData);
+            } catch (e) {
+                errorJson = { error: errorData };
+            }
+            
+            // 如果是 412 错误（需要注册），尝试自动注册
+            if (response.status === 412 && errorJson.error && errorJson.error.includes('must be registered')) {
+                console.log('检测到 412 错误，尝试自动注册账户...');
+                updateConnectionStatus('connecting', '检测到需要注册账户，正在自动注册...');
+                
+                try {
+                    await registerPartnerAccount();
+                    updateConnectionStatus('connected', '账户注册成功！正在重新获取数据...');
+                    
+                    // 重新尝试获取车辆数据
+                    return await fetchVehicleData();
+                } catch (regError) {
+                    console.error('自动注册失败:', regError);
+                    throw new Error(`账户需要注册到区域。自动注册失败: ${regError.message}`);
+                }
+            }
+            
             throw new Error(`API 错误: ${response.status} - ${errorData}`);
         }
         
