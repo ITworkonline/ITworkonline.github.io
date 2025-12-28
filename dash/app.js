@@ -960,6 +960,12 @@ async function configureFleetTelemetry() {
         
         const data = await response.json();
         console.log('Fleet Telemetry 配置成功:', data);
+        
+        // 检查 synced 状态
+        if (data.response && data.response.synced === false) {
+            console.warn('⚠️ 配置已发送，但尚未同步。请等待几秒钟后检查状态。');
+        }
+        
         return data;
     } catch (error) {
         console.error('配置 Fleet Telemetry 失败:', error);
