@@ -1153,7 +1153,19 @@ function updateDashboard(vehicleData) {
         }
     }
     
-    console.log('最终使用的速度值:', speed);
+    // 如果找到了 VehicleSpeed（mph），转换为 km/h
+    if (speedInMph !== null) {
+        speed = speedInMph * 1.60934; // 英里/小时 转 公里/小时
+        console.log('VehicleSpeed 转换: ', speedInMph, 'mph =', speed, 'km/h');
+    }
+    
+    // 确保速度值有效
+    if (speed === undefined || speed === null || isNaN(speed)) {
+        speed = 0;
+        console.warn('⚠️ 速度值无效，设置为 0');
+    }
+    
+    console.log('最终使用的速度值:', speed, 'km/h');
     updateSpeed(speed);
     
     // 更新电池信息
