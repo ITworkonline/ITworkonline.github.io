@@ -915,7 +915,13 @@ async function fetchVehicleData() {
             ? `${config.proxyUrl}?url=${encodeURIComponent(urlWithParams)}`
             : urlWithParams;
         
-        console.log('请求 URL:', apiUrl);
+        console.log('请求 vehicle_data URL:', apiUrl);
+        
+        // 准备单独获取 drive_state 的 URL（作为备用）
+        const driveStateUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/drive_state`;
+        const driveStateApiUrl = config.proxyUrl 
+            ? `${config.proxyUrl}?url=${encodeURIComponent(driveStateUrl)}`
+            : driveStateUrl;
         
         let response;
         try {
