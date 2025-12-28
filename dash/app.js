@@ -1292,6 +1292,17 @@ async function fetchVehicleData() {
             console.log('vehicle_state 的键:', Object.keys(data.response.vehicle_state));
         }
         
+        // 再次验证（双重检查）
+        const finalKeys = Object.keys(data.response);
+        const hasVehicleDataFields = finalKeys.some(key => 
+            ['drive_state', 'charge_state', 'vehicle_state', 'climate_state'].includes(key)
+        );
+        
+        if (!hasVehicleDataFields) {
+            console.error('❌ 验证失败：响应仍然不是 vehicle_data');
+            throw new Error('API 返回了错误的响应格式');
+        }
+        
         updateDashboard(data.response);
         updateConnectionStatus('connected', '已连接');
         updateLastUpdateTime();
