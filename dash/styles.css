@@ -153,6 +153,62 @@ body {
     border-radius: 12px;
 }
 
+/* 控制按钮 */
+.btn-stop, .btn-start {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: 'Rajdhani', sans-serif;
+    letter-spacing: 0.5px;
+    backdrop-filter: blur(10px);
+    min-width: 100px;
+    justify-content: center;
+}
+
+.btn-stop {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.2) 0%, rgba(200, 0, 0, 0.2) 100%);
+    border: 1px solid rgba(255, 0, 0, 0.4);
+    color: #ff6666;
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.2);
+}
+
+.btn-stop:hover {
+    background: linear-gradient(135deg, rgba(255, 0, 0, 0.3) 0%, rgba(200, 0, 0, 0.3) 100%);
+    border-color: rgba(255, 0, 0, 0.6);
+    box-shadow: 0 0 20px rgba(255, 0, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-start {
+    background: linear-gradient(135deg, rgba(0, 255, 0, 0.2) 0%, rgba(0, 200, 0, 0.2) 100%);
+    border: 1px solid rgba(0, 255, 0, 0.4);
+    color: #00ff00;
+    box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+}
+
+.btn-start:hover {
+    background: linear-gradient(135deg, rgba(0, 255, 0, 0.3) 0%, rgba(0, 200, 0, 0.3) 100%);
+    border-color: rgba(0, 255, 0, 0.6);
+    box-shadow: 0 0 20px rgba(0, 255, 0, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-icon {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.btn-text {
+    font-size: 12px;
+}
+
 /* 主速度显示 */
 .speed-display {
     text-align: center;

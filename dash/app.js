@@ -952,6 +952,10 @@ async function fetchVehicleData() {
             updateDashboard(data.response);
             updateConnectionStatus('connected', '已连接');
             updateLastUpdateTime();
+            // 确保按钮在连接成功时显示
+            if (updateTimer) {
+                updateControlButtons(true);
+            }
         } else {
             throw new Error('无效的响应数据');
         }
