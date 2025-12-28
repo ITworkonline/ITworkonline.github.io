@@ -1097,6 +1097,26 @@ async function fetchVehicleData() {
                     if (!window.telemetryUpdateCount) {
                         window.telemetryUpdateCount = 0;
                     }
+                    
+                    window.telemetryUpdateCount++;
+                    
+                    // 每 5 次更新一次其他数据（约每 2.5 秒）
+                    if (window.telemetryUpdateCount >= 5) {
+                        window.telemetryUpdateCount = 0;
+                        // 获取其他数据（电池、里程等）
+                        await fetchOtherVehicleData();
+                    }
+                    
+                    return; // 成功获取 Telemetry 速度，直接返回
+                } else {
+                    // 如果更新已停止，不获取数据
+                    return;
+                }
+            } else {
+                // Telemetry 获取失败，继续使用 Fleet API
+                console.warn('⚠️ 从 Telemetry 获取速度失败，尝试使用 Fleet API');
+            }
+        }
                     window.telemetryUpdateCount++;
                     
                     if (window.telemetryUpdateCount >= 5) {
@@ -1129,6 +1149,8 @@ async function fetchVehicleData() {
         // 构建 API URL（使用代理或直接调用）
         // Tesla Fleet API 需要 endpoints 参数来指定要返回的数据
         // 可以指定多个 endpoints，用逗号分隔
+        // 注意：根据 Tesla Fleet API 文档，vehicle_data 端点可能需要不同的格式
+        // 如果返回车辆列表对象，说明端点可能不正确
         const baseUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`;
         // 尝试请求所有可用的 endpoints
         const urlWithParams = `${baseUrl}?endpoints=drive_state,charge_state,vehicle_state,climate_state,gui_settings,vehicle_config`;
@@ -1137,6 +1159,7 @@ async function fetchVehicleData() {
             : urlWithParams;
         
         console.log('请求 vehicle_data URL:', apiUrl);
+        console.log('使用的 Vehicle ID:', config.vehicleId);
         
         // 准备单独获取 drive_state 的 URL（作为备用）
         const driveStateUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/drive_state`;
@@ -1607,25 +1630,6 @@ async function setupTelemetry() {
         } catch (errorLogError) {
             updateOAuthStatus('error', `配置失败: ${error.message}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）\n4. 虚拟密钥是否已配对到车辆`);
         }
-    }
-    
-    // 更新电池信息
-    const chargeState = vehicleData.charge_state;
-    if (chargeState) {
-        const batteryLevel = chargeState.battery_level || 0;
-        const chargingState = chargeState.charging_state || 'Unknown';
-        
-        document.getElementById('batteryLevel').textContent = `${batteryLevel}%`;
-        document.getElementById('chargingState').textContent = 
-            chargingState === 'Charging' ? '充电中' : 
-            chargingState === 'Disconnected' ? '未连接' : 
-            chargingState === 'Complete' ? '已完成' : '待机';
-    }
-    
-    // 更新里程
-    const odometer = vehicleData.vehicle_state?.odometer;
-    if (odometer) {
-        document.getElementById('odometer').textContent = `${odometer.toFixed(1)} km`;
     }
 }
 
