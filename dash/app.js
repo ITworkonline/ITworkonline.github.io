@@ -563,10 +563,30 @@ async function fetchVehicles() {
     try {
         updateOAuthStatus('loading', '正在获取车辆列表...');
         
+        // 重新加载配置，确保获取最新的 proxyUrl
+        const savedConfig = localStorage.getItem('teslaDashConfig');
+        if (savedConfig) {
+            const saved = JSON.parse(savedConfig);
+            config = { ...config, ...saved };
+        }
+        
+        // 如果还是没有 proxyUrl，尝试从输入框获取
+        if (!config.proxyUrl) {
+            const proxyInput = document.getElementById('proxyUrl');
+            if (proxyInput && proxyInput.value.trim()) {
+                config.proxyUrl = proxyInput.value.trim();
+                localStorage.setItem('teslaDashConfig', JSON.stringify(config));
+            }
+        }
+        
+        console.log('获取车辆列表 - Proxy URL:', config.proxyUrl || '未设置');
+        
         // 构建 API URL（使用代理或直接调用）
         const apiUrl = config.proxyUrl 
             ? `${config.proxyUrl}?url=${encodeURIComponent(`${TESLA_API_BASE}/api/1/vehicles`)}`
             : `${TESLA_API_BASE}/api/1/vehicles`;
+        
+        console.log('获取车辆列表 - API URL:', apiUrl);
         
         let response;
         try {
