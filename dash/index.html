@@ -132,8 +132,12 @@
                     <button class="btn-login" onclick="setupTelemetry()" style="margin-top: 10px; width: 100%;">
                         ⚙️ 配置 Fleet Telemetry
                     </button>
+                    <button class="btn-fetch-vehicles" onclick="checkTelemetryStatus()" style="margin-top: 8px; width: 100%;">
+                        📊 检查 Telemetry 状态
+                    </button>
                     <small class="config-hint" style="color: #888; font-size: 11px; margin-top: 5px; display: block;">
-                        点击此按钮通过 API 配置车辆发送 Telemetry 数据到服务器
+                        点击"配置"按钮通过 API 配置车辆发送 Telemetry 数据到服务器<br>
+                        点击"检查状态"查看配置是否已同步（synced: true）
                     </small>
                 </div>
             </div>
