@@ -18,12 +18,10 @@ let config = {
 };
 
 let updateTimer = null;
-let speedometerMaxSpeed = 200; // km/h
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
     loadConfig();
-    initializeSpeedometer();
     
     // 设置默认 redirect URI
     if (!config.redirectUri) {
@@ -1057,8 +1055,17 @@ function updateSpeed(speed) {
     const speedValue = Math.round(speed || 0);
     document.getElementById('speedValue').textContent = speedValue;
     
-    // 更新速度表盘
-    updateSpeedometer(speedValue);
+    // 根据速度改变颜色
+    let color = '#00ff00'; // 绿色
+    if (speedValue > 120) {
+        color = '#ff0000'; // 红色
+    } else if (speedValue > 80) {
+        color = '#ffaa00'; // 橙色
+    }
+    
+    document.getElementById('speedValue').style.color = color;
+    document.getElementById('speedValue').style.textShadow = 
+        `0 0 10px ${color}80, 0 0 20px ${color}60, 0 0 30px ${color}40, 0 0 40px ${color}20`;
 }
 
 // 更新速度表盘

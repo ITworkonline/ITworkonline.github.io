@@ -45,45 +45,6 @@
             </div>
         </div>
 
-        <!-- 速度表盘 -->
-        <div class="speedometer">
-            <svg class="speedometer-svg" viewBox="0 0 400 200">
-                <defs>
-                    <linearGradient id="speedGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style="stop-color:#00ff00;stop-opacity:1" />
-                        <stop offset="50%" style="stop-color:#00ccff;stop-opacity:1" />
-                        <stop offset="100%" style="stop-color:#ff00ff;stop-opacity:1" />
-                    </linearGradient>
-                    <filter id="glow">
-                        <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
-                        <feMerge>
-                            <feMergeNode in="coloredBlur"/>
-                            <feMergeNode in="SourceGraphic"/>
-                        </feMerge>
-                    </filter>
-                </defs>
-                
-                <!-- 背景弧线 -->
-                <path class="speedometer-track" d="M 50 150 A 150 150 0 0 1 350 150" 
-                      fill="none" stroke="#1a1a1a" stroke-width="25"/>
-                
-                <!-- 速度弧线 -->
-                <path class="speedometer-fill" id="speedArc" 
-                      d="M 50 150 A 150 150 0 0 1 350 150" 
-                      fill="none" stroke="url(#speedGradient)" stroke-width="25" 
-                      stroke-linecap="round" stroke-dasharray="471" stroke-dashoffset="471"
-                      filter="url(#glow)"/>
-                
-                <!-- 刻度线 -->
-                <g class="speedometer-ticks" id="speedTicks"></g>
-                
-                <!-- 指针 -->
-                <line class="speedometer-needle" id="speedNeedle" 
-                      x1="200" y1="150" x2="200" y2="50" 
-                      stroke="#ffffff" stroke-width="5" stroke-linecap="round"
-                      filter="url(#glow)"/>
-            </svg>
-        </div>
 
         <!-- 附加信息 -->
         <div class="info-panel">
