@@ -912,6 +912,61 @@ function generateRandomString(length) {
     return result;
 }
 
+// 配置 Fleet Telemetry（通过 API 命令）
+async function configureFleetTelemetry() {
+    if (!config.apiToken || !config.vehicleId) {
+        throw new Error('请先登录并选择车辆');
+    }
+    
+    if (!config.telemetryUrl) {
+        throw new Error('请先配置 Fleet Telemetry 服务器 URL');
+    }
+    
+    // 从 HTTP URL 转换为 WebSocket URL
+    const wsUrl = config.telemetryUrl.replace('https://', 'wss://').replace('http://', 'ws://') + '/telemetry';
+    
+    console.log('配置 Fleet Telemetry...');
+    console.log('WebSocket URL:', wsUrl);
+    console.log('车辆 ID:', config.vehicleId);
+    
+    const url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/command/fleet_telemetry_config`;
+    const apiUrl = config.proxyUrl 
+        ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
+        : url;
+    
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${config.apiToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                websocket_url: wsUrl,
+                fields: [4] // VehicleSpeed = 4 (根据 protobuf 定义)
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.text().catch(() => response.statusText);
+            let errorJson;
+            try {
+                errorJson = JSON.parse(errorData);
+            } catch (e) {
+                errorJson = { error: errorData };
+            }
+            throw new Error(`配置失败: ${response.status} - ${JSON.stringify(errorJson)}`);
+        }
+        
+        const data = await response.json();
+        console.log('Fleet Telemetry 配置成功:', data);
+        return data;
+    } catch (error) {
+        console.error('配置 Fleet Telemetry 失败:', error);
+        throw error;
+    }
+}
+
 // 从 Fleet Telemetry 服务器获取速度数据
 async function fetchSpeedFromTelemetry() {
     if (!config.telemetryUrl || !config.vin) {
@@ -1299,6 +1354,41 @@ function updateDashboard(vehicleData) {
     
     console.log('最终使用的速度值:', speed, 'km/h');
     updateSpeed(speed);
+}
+
+// 设置 Fleet Telemetry（UI 调用）
+async function setupTelemetry() {
+    try {
+        updateOAuthStatus('loading', '正在配置 Fleet Telemetry...');
+        
+        // 保存当前配置
+        saveConfig();
+        
+        // 检查必要配置
+        if (!config.apiToken || !config.vehicleId) {
+            throw new Error('请先登录并选择车辆');
+        }
+        
+        if (!config.telemetryUrl) {
+            throw new Error('请先配置 Fleet Telemetry 服务器 URL');
+        }
+        
+        // 配置 Telemetry
+        await configureFleetTelemetry();
+        
+        updateOAuthStatus('success', '✅ Fleet Telemetry 配置成功！\n\n车辆现在会开始发送数据到服务器。\n请等待几秒钟后点击"开始读取"。');
+        
+        // 3 秒后自动开始读取
+        setTimeout(() => {
+            if (!updateTimer) {
+                startUpdates();
+            }
+        }, 3000);
+        
+    } catch (error) {
+        console.error('设置 Telemetry 失败:', error);
+        updateOAuthStatus('error', `配置失败: ${error.message}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）`);
+    }
     
     // 更新电池信息
     const chargeState = vehicleData.charge_state;

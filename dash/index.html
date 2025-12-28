@@ -129,6 +129,12 @@
                     <label for="vin">车辆 VIN (用于 Telemetry):</label>
                     <input type="text" id="vin" placeholder="5YJ3E1EA1KF123456">
                     <small class="config-hint">车辆识别码，用于匹配 Telemetry 数据。可在车辆信息中找到</small>
+                    <button class="btn-login" onclick="setupTelemetry()" style="margin-top: 10px; width: 100%;">
+                        ⚙️ 配置 Fleet Telemetry
+                    </button>
+                    <small class="config-hint" style="color: #888; font-size: 11px; margin-top: 5px; display: block;">
+                        点击此按钮通过 API 配置车辆发送 Telemetry 数据到服务器
+                    </small>
                 </div>
             </div>
 
