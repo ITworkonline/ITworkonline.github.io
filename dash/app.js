@@ -1039,7 +1039,10 @@ function updateConnectionStatus(status, message) {
     // 根据状态更新按钮显示
     if (status === 'connected' && updateTimer) {
         updateControlButtons(true);
-    } else if (status === 'paused' || !updateTimer) {
+    } else if (status === 'paused') {
+        updateControlButtons(false);
+    } else if (status === 'connected' && !updateTimer) {
+        // 如果显示已连接但没有定时器，显示开始按钮
         updateControlButtons(false);
     }
     
@@ -1049,6 +1052,7 @@ function updateConnectionStatus(status, message) {
     } else if (status === 'error') {
         statusDot.classList.add('error');
         statusText.textContent = message;
+        updateControlButtons(false);
     } else {
         statusText.textContent = message;
     }
