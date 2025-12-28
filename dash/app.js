@@ -946,7 +946,7 @@ function updateDashboard(vehicleData) {
     // 更新里程
     const odometer = vehicleData.vehicle_state?.odometer;
     if (odometer) {
-        document.getElementById('odometer').textContent = `${odometer.toFixed(1)} km`;
+        document.getElementById('odometer').textContent = `${odometer.toFixed(1)} miles`;
     }
 }
 
