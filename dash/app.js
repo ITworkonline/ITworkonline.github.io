@@ -200,12 +200,21 @@ function startUpdates() {
         return;
     }
     
+    // 如果已经有定时器在运行，先清除
+    if (updateTimer) {
+        clearInterval(updateTimer);
+        updateTimer = null;
+    }
+    
     // 立即执行一次
     fetchVehicleData();
     
     // 设置定时更新
     updateTimer = setInterval(() => {
-        fetchVehicleData();
+        // 检查定时器是否仍然有效（防止在停止后仍然执行）
+        if (updateTimer) {
+            fetchVehicleData();
+        }
     }, config.updateInterval * 1000);
     
     // 更新按钮状态
@@ -214,21 +223,30 @@ function startUpdates() {
 
 // 停止更新
 function stopUpdates() {
+    console.log('停止更新 - 当前 updateTimer:', updateTimer);
+    
     if (updateTimer) {
         clearInterval(updateTimer);
         updateTimer = null;
+        console.log('定时器已清除');
     }
     
     // 更新按钮状态
     updateControlButtons(false);
     updateConnectionStatus('paused', '已暂停读取');
+    
+    console.log('更新已停止，updateTimer:', updateTimer);
 }
 
 // 切换更新状态
 function toggleUpdates() {
+    console.log('toggleUpdates 被调用，当前 updateTimer:', updateTimer);
+    
     if (updateTimer) {
+        console.log('停止更新...');
         stopUpdates();
     } else {
+        console.log('开始更新...');
         startUpdates();
     }
 }
