@@ -7,6 +7,12 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+    <!-- 背景动画层 -->
+    <div class="bg-animation">
+        <div class="grid-overlay"></div>
+        <div class="particles"></div>
+    </div>
+    
     <div class="dashboard-container">
         <!-- 状态指示器 -->
         <div class="status-bar">
@@ -19,8 +25,14 @@
 
         <!-- 主速度显示 -->
         <div class="speed-display">
-            <div class="speed-value" id="speedValue">0</div>
-            <div class="speed-unit">mph</div>
+            <div class="speed-glow"></div>
+            <div class="speed-value" id="speedValue">
+                <span class="speed-digit">0</span>
+            </div>
+            <div class="speed-unit">
+                <span class="unit-text">km/h</span>
+                <div class="unit-line"></div>
+            </div>
         </div>
 
         <!-- 速度表盘 -->
@@ -49,16 +61,21 @@
         <!-- 附加信息 -->
         <div class="info-panel">
             <div class="info-item">
+                <div class="info-icon">🔋</div>
                 <div class="info-label">电池电量</div>
                 <div class="info-value" id="batteryLevel">--</div>
+                <div class="info-unit">%</div>
             </div>
             <div class="info-item">
+                <div class="info-icon">⚡</div>
                 <div class="info-label">充电状态</div>
                 <div class="info-value" id="chargingState">--</div>
             </div>
             <div class="info-item">
+                <div class="info-icon">📊</div>
                 <div class="info-label">里程</div>
                 <div class="info-value" id="odometer">--</div>
+                <div class="info-unit">km</div>
             </div>
         </div>
 
