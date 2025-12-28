@@ -1066,43 +1066,67 @@ function updateDashboard(vehicleData) {
     console.log('updateDashboard - 开始处理速度数据');
     console.log('vehicleData 完整对象:', vehicleData);
     
-    // 根据 Tesla 官方文档，速度字段是 VehicleSpeed（单位：英里/小时）
-    // 优先尝试 VehicleSpeed 字段，然后尝试其他可能的字段
+    // 根据 Tesla 官方文档：
+    // - Fleet Telemetry 使用 VehicleSpeed（单位：mph）
+    // - Fleet API 的 drive_state 可能使用 speed（单位可能是 mph 或 km/h，取决于车辆设置）
+    // 优先尝试 VehicleSpeed 字段（Fleet Telemetry），然后尝试 speed 字段（Fleet API）
     let speedInMph = null;
+    let speedFound = false;
     
+    // 方法1: 查找 VehicleSpeed（Fleet Telemetry 格式，明确是 mph）
     if (vehicleData.drive_state?.VehicleSpeed !== undefined && vehicleData.drive_state?.VehicleSpeed !== null) {
         speedInMph = vehicleData.drive_state.VehicleSpeed;
-        console.log('找到速度: drive_state.VehicleSpeed =', speedInMph, 'mph');
+        speedFound = true;
+        console.log('✅ 找到速度: drive_state.VehicleSpeed =', speedInMph, 'mph (Fleet Telemetry)');
     } else if (vehicleData.VehicleSpeed !== undefined && vehicleData.VehicleSpeed !== null) {
         speedInMph = vehicleData.VehicleSpeed;
-        console.log('找到速度: VehicleSpeed =', speedInMph, 'mph');
+        speedFound = true;
+        console.log('✅ 找到速度: VehicleSpeed =', speedInMph, 'mph (Fleet Telemetry)');
     } else if (vehicleData.vehicle_state?.VehicleSpeed !== undefined && vehicleData.vehicle_state?.VehicleSpeed !== null) {
         speedInMph = vehicleData.vehicle_state.VehicleSpeed;
-        console.log('找到速度: vehicle_state.VehicleSpeed =', speedInMph, 'mph');
-    } else if (vehicleData.drive_state?.speed !== undefined && vehicleData.drive_state?.speed !== null) {
-        // 兼容旧的 speed 字段（可能是 km/h 或 mph，需要判断）
-        speed = vehicleData.drive_state.speed;
-        console.log('找到速度: drive_state.speed =', speed);
-        // 如果速度值看起来像 mph（通常 < 150），可能需要转换
-        if (speed < 150 && speed > 0) {
-            console.log('速度值较小，可能是 mph，转换为 km/h');
-            speed = speed * 1.60934;
+        speedFound = true;
+        console.log('✅ 找到速度: vehicle_state.VehicleSpeed =', speedInMph, 'mph (Fleet Telemetry)');
+    }
+    
+    // 方法2: 查找 speed 字段（Fleet API 格式，单位取决于车辆设置）
+    if (!speedFound && vehicleData.drive_state?.speed !== undefined && vehicleData.drive_state?.speed !== null) {
+        const rawSpeed = vehicleData.drive_state.speed;
+        console.log('找到速度: drive_state.speed =', rawSpeed, '(Fleet API)');
+        
+        // Fleet API 的 speed 字段单位取决于车辆的设置（可能是 mph 或 km/h）
+        // 如果值看起来像 mph（通常 < 150），假设是 mph 并转换
+        // 如果值看起来像 km/h（通常 >= 150），假设已经是 km/h
+        if (rawSpeed < 150 && rawSpeed > 0) {
+            console.log('速度值较小，假设是 mph，转换为 km/h');
+            speed = rawSpeed * 1.60934;
+        } else {
+            console.log('速度值较大，假设已经是 km/h');
+            speed = rawSpeed;
         }
-    } else if (vehicleData.vehicle_state?.speed !== undefined && vehicleData.vehicle_state?.speed !== null) {
-        speed = vehicleData.vehicle_state.speed;
-        console.log('找到速度: vehicle_state.speed =', speed);
-        if (speed < 150 && speed > 0) {
-            console.log('速度值较小，可能是 mph，转换为 km/h');
-            speed = speed * 1.60934;
+        speedFound = true;
+    } else if (!speedFound && vehicleData.vehicle_state?.speed !== undefined && vehicleData.vehicle_state?.speed !== null) {
+        const rawSpeed = vehicleData.vehicle_state.speed;
+        console.log('找到速度: vehicle_state.speed =', rawSpeed);
+        if (rawSpeed < 150 && rawSpeed > 0) {
+            console.log('速度值较小，假设是 mph，转换为 km/h');
+            speed = rawSpeed * 1.60934;
+        } else {
+            speed = rawSpeed;
         }
-    } else if (vehicleData.speed !== undefined && vehicleData.speed !== null) {
-        speed = vehicleData.speed;
-        console.log('找到速度: speed =', speed);
-        if (speed < 150 && speed > 0) {
-            console.log('速度值较小，可能是 mph，转换为 km/h');
-            speed = speed * 1.60934;
+        speedFound = true;
+    } else if (!speedFound && vehicleData.speed !== undefined && vehicleData.speed !== null) {
+        const rawSpeed = vehicleData.speed;
+        console.log('找到速度: speed =', rawSpeed);
+        if (rawSpeed < 150 && rawSpeed > 0) {
+            console.log('速度值较小，假设是 mph，转换为 km/h');
+            speed = rawSpeed * 1.60934;
+        } else {
+            speed = rawSpeed;
         }
-    } else {
+        speedFound = true;
+    }
+    
+    if (!speedFound) {
         // 详细调试：列出所有可能的字段
         console.warn('未找到速度数据！');
         console.log('尝试的字段值:', {
