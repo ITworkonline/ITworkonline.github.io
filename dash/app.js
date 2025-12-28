@@ -930,8 +930,12 @@ async function fetchVehicleData() {
         }
         
         if (response.status === 401) {
-            // Token 过期，尝试刷新
-            await refreshAccessToken();
+            // Token 过期，尝试刷新（只有在定时器仍在运行时）
+            if (updateTimer) {
+                await refreshAccessToken();
+            } else {
+                console.log('定时器已停止，取消 token 刷新');
+            }
             return;
         }
         
@@ -953,8 +957,13 @@ async function fetchVehicleData() {
                     await registerPartnerAccount();
                     updateConnectionStatus('connected', '账户注册成功！正在重新获取数据...');
                     
-                    // 重新尝试获取车辆数据
-                    return await fetchVehicleData();
+                    // 重新尝试获取车辆数据（只有在定时器仍在运行时）
+                    if (updateTimer) {
+                        return await fetchVehicleData();
+                    } else {
+                        console.log('定时器已停止，取消重新获取数据');
+                        return;
+                    }
                 } catch (regError) {
                     console.error('自动注册失败:', regError);
                     throw new Error(`账户需要注册到区域。自动注册失败: ${regError.message}`);
