@@ -276,18 +276,23 @@ async function registerPartnerAccount() {
         }
         
         // 构建 API URL（使用代理或直接调用）
+        const targetUrl = `${TESLA_API_BASE}/api/1/partner_accounts`;
         const apiUrl = config.proxyUrl 
-            ? `${config.proxyUrl}?url=${encodeURIComponent(`${TESLA_API_BASE}/api/1/partner_accounts`)}`
-            : `${TESLA_API_BASE}/api/1/partner_accounts`;
+            ? `${config.proxyUrl}?url=${encodeURIComponent(targetUrl)}`
+            : targetUrl;
         
-        const response = await fetch(apiUrl, {
+        const fetchOptions = {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${partnerToken}`,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
             }
-        });
+        };
+        
+        // 如果使用代理，POST 请求体需要作为查询参数或通过其他方式传递
+        // 但我们的代理会转发所有 headers，所以应该可以工作
+        const response = await fetch(apiUrl, fetchOptions);
 
         if (!response.ok) {
             const errorData = await response.text().catch(() => '无法读取错误信息');
