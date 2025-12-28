@@ -120,6 +120,16 @@
                     <input type="text" id="proxyUrl" placeholder="例如: https://your-proxy.com/api/proxy">
                     <small class="config-hint">由于 Tesla API 的 CORS 限制，需要代理服务器。留空则尝试直接调用（可能失败）</small>
                 </div>
+                <div class="config-item">
+                    <label for="telemetryUrl">Fleet Telemetry 服务器 URL (可选):</label>
+                    <input type="text" id="telemetryUrl" placeholder="例如: https://your-telemetry.railway.app">
+                    <small class="config-hint">如果配置了 Telemetry 服务器，将优先使用实时速度数据（每 500ms 更新）</small>
+                </div>
+                <div class="config-item">
+                    <label for="vin">车辆 VIN (用于 Telemetry):</label>
+                    <input type="text" id="vin" placeholder="5YJ3E1EA1KF123456">
+                    <small class="config-hint">车辆识别码，用于匹配 Telemetry 数据。可在车辆信息中找到</small>
+                </div>
             </div>
 
             <button class="btn-save" onclick="saveConfig()">保存配置</button>

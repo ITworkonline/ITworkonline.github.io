@@ -13,8 +13,10 @@ let config = {
     partnerToken: '', // Partner Authentication Token (用于注册)
     partnerTokenExpiresAt: 0,
     vehicleId: '',
+    vin: '', // 车辆 VIN（用于 Fleet Telemetry）
     updateInterval: 2,
-    proxyUrl: '' // CORS 代理 URL（可选）
+    proxyUrl: '', // CORS 代理 URL（可选）
+    telemetryUrl: '' // Fleet Telemetry 服务器 URL（可选）
 };
 
 let updateTimer = null;
@@ -101,6 +103,14 @@ function loadConfig() {
         if (proxyInput) {
             proxyInput.value = config.proxyUrl || '';
         }
+        const telemetryInput = document.getElementById('telemetryUrl');
+        if (telemetryInput) {
+            telemetryInput.value = config.telemetryUrl || '';
+        }
+        const vinInput = document.getElementById('vin');
+        if (vinInput) {
+            vinInput.value = config.vin || '';
+        }
     }
 }
 
@@ -115,6 +125,14 @@ function saveConfig() {
     const proxyInput = document.getElementById('proxyUrl');
     if (proxyInput) {
         config.proxyUrl = proxyInput.value.trim();
+    }
+    const telemetryInput = document.getElementById('telemetryUrl');
+    if (telemetryInput) {
+        config.telemetryUrl = telemetryInput.value.trim();
+    }
+    const vinInput = document.getElementById('vin');
+    if (vinInput) {
+        config.vin = vinInput.value.trim();
     }
     
     localStorage.setItem('teslaDashConfig', JSON.stringify(config));
@@ -894,9 +912,75 @@ function generateRandomString(length) {
     return result;
 }
 
+// 从 Fleet Telemetry 服务器获取速度数据
+async function fetchSpeedFromTelemetry() {
+    if (!config.telemetryUrl || !config.vin) {
+        return null;
+    }
+    
+    try {
+        const url = `${config.telemetryUrl}/api/vehicle/${config.vin}`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.speed !== null && data.speed !== undefined) {
+                console.log('✅ 从 Fleet Telemetry 获取速度:', data.speed, 'km/h');
+                return data.speed;
+            }
+        } else {
+            console.warn('Telemetry 服务器响应错误:', response.status);
+        }
+    } catch (error) {
+        console.warn('从 Telemetry 服务器获取速度失败:', error);
+    }
+    
+    return null;
+}
+
 // 获取车辆数据
 async function fetchVehicleData() {
     try {
+        // 如果配置了 Telemetry 服务器，优先从 Telemetry 获取速度
+        if (config.telemetryUrl && config.vin) {
+            const telemetrySpeed = await fetchSpeedFromTelemetry();
+            if (telemetrySpeed !== null) {
+                // 使用 Telemetry 速度数据
+                updateSpeed(telemetrySpeed);
+                
+                // 仍然从 Fleet API 获取其他数据（电池、里程等）
+                // 但只在需要时调用（避免频繁请求）
+                if (updateTimer) {
+                    // 每 5 次 Telemetry 更新后，更新一次其他数据
+                    if (!window.telemetryUpdateCount) {
+                        window.telemetryUpdateCount = 0;
+                    }
+                    window.telemetryUpdateCount++;
+                    
+                    if (window.telemetryUpdateCount >= 5) {
+                        window.telemetryUpdateCount = 0;
+                        // 异步获取其他数据，不阻塞速度更新
+                        fetchOtherVehicleData().catch(err => {
+                            console.warn('获取其他车辆数据失败:', err);
+                        });
+                    }
+                }
+                
+                updateConnectionStatus('connected', '已连接 (Telemetry)');
+                updateLastUpdateTime();
+                if (updateTimer) {
+                    updateControlButtons(true);
+                }
+                return;
+            }
+        }
+        
+        // 如果没有 Telemetry 或获取失败，使用原来的 Fleet API 方法
         // 检查 token 是否过期
         if (isTokenExpired()) {
             await refreshAccessToken();
@@ -1055,6 +1139,54 @@ async function fetchVehicleData() {
     } catch (error) {
         console.error('获取车辆数据失败:', error);
         updateConnectionStatus('error', `错误: ${error.message}`);
+    }
+}
+
+// 获取其他车辆数据（电池、里程等，不包含速度）
+async function fetchOtherVehicleData() {
+    try {
+        if (isTokenExpired()) {
+            await refreshAccessToken();
+            return;
+        }
+        
+        const baseUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`;
+        const urlWithParams = `${baseUrl}?endpoints=charge_state,vehicle_state`;
+        const apiUrl = config.proxyUrl 
+            ? `${config.proxyUrl}?url=${encodeURIComponent(urlWithParams)}`
+            : urlWithParams;
+        
+        const response = await fetch(apiUrl, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${config.apiToken}`,
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.response) {
+                // 只更新电池和里程，不更新速度
+                const chargeState = data.response.charge_state;
+                if (chargeState) {
+                    const batteryLevel = chargeState.battery_level || chargeState.charging_state;
+                    if (batteryLevel !== undefined) {
+                        document.getElementById('batteryValue').textContent = Math.round(batteryLevel);
+                    }
+                }
+                
+                const vehicleState = data.response.vehicle_state;
+                if (vehicleState) {
+                    const odometer = vehicleState.odometer;
+                    if (odometer !== undefined) {
+                        document.getElementById('odometerValue').textContent = odometer.toFixed(1) + ' km';
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.warn('获取其他车辆数据失败:', error);
     }
 }
 
