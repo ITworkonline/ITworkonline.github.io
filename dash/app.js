@@ -979,7 +979,26 @@ async function fetchVehicleData() {
         
         const data = await response.json();
         
+        // 调试：输出完整的响应数据
+        console.log('Tesla API 完整响应:', JSON.stringify(data, null, 2));
+        
         if (data.response) {
+            // 调试：输出 response 对象的结构
+            console.log('Response 对象:', data.response);
+            console.log('Response 对象的键:', Object.keys(data.response));
+            
+            // 检查 drive_state
+            if (data.response.drive_state) {
+                console.log('drive_state:', data.response.drive_state);
+                console.log('drive_state 的键:', Object.keys(data.response.drive_state));
+            }
+            
+            // 检查 vehicle_state
+            if (data.response.vehicle_state) {
+                console.log('vehicle_state:', data.response.vehicle_state);
+                console.log('vehicle_state 的键:', Object.keys(data.response.vehicle_state));
+            }
+            
             updateDashboard(data.response);
             updateConnectionStatus('connected', '已连接');
             updateLastUpdateTime();
@@ -1002,31 +1021,56 @@ function updateDashboard(vehicleData) {
     // 更新速度 - 尝试多个可能的字段名
     let speed = 0;
     
+    console.log('updateDashboard - 开始处理速度数据');
+    console.log('vehicleData 完整对象:', vehicleData);
+    
     // 尝试不同的字段路径
     if (vehicleData.VehicleSpeed !== undefined && vehicleData.VehicleSpeed !== null) {
         speed = vehicleData.VehicleSpeed;
+        console.log('找到速度: VehicleSpeed =', speed);
     } else if (vehicleData.vehicle_state?.VehicleSpeed !== undefined && vehicleData.vehicle_state?.VehicleSpeed !== null) {
         speed = vehicleData.vehicle_state.VehicleSpeed;
+        console.log('找到速度: vehicle_state.VehicleSpeed =', speed);
+    } else if (vehicleData.drive_state?.VehicleSpeed !== undefined && vehicleData.drive_state?.VehicleSpeed !== null) {
+        speed = vehicleData.drive_state.VehicleSpeed;
+        console.log('找到速度: drive_state.VehicleSpeed =', speed);
     } else if (vehicleData.drive_state?.speed !== undefined && vehicleData.drive_state?.speed !== null) {
         speed = vehicleData.drive_state.speed;
+        console.log('找到速度: drive_state.speed =', speed);
     } else if (vehicleData.vehicle_state?.speed !== undefined && vehicleData.vehicle_state?.speed !== null) {
         speed = vehicleData.vehicle_state.speed;
+        console.log('找到速度: vehicle_state.speed =', speed);
     } else if (vehicleData.speed !== undefined && vehicleData.speed !== null) {
         speed = vehicleData.speed;
-    }
-    
-    // 调试日志
-    if (speed === 0) {
-        console.log('速度数据调试 - vehicleData:', vehicleData);
-        console.log('尝试的字段:', {
+        console.log('找到速度: speed =', speed);
+    } else {
+        // 详细调试：列出所有可能的字段
+        console.warn('未找到速度数据！');
+        console.log('尝试的字段值:', {
             'VehicleSpeed': vehicleData.VehicleSpeed,
             'vehicle_state.VehicleSpeed': vehicleData.vehicle_state?.VehicleSpeed,
+            'drive_state.VehicleSpeed': vehicleData.drive_state?.VehicleSpeed,
             'drive_state.speed': vehicleData.drive_state?.speed,
             'vehicle_state.speed': vehicleData.vehicle_state?.speed,
             'speed': vehicleData.speed
         });
+        
+        // 列出所有顶层键
+        console.log('vehicleData 的所有顶层键:', Object.keys(vehicleData));
+        
+        // 如果 drive_state 存在，列出它的所有键
+        if (vehicleData.drive_state) {
+            console.log('drive_state 的所有键:', Object.keys(vehicleData.drive_state));
+            console.log('drive_state 完整内容:', vehicleData.drive_state);
+        }
+        
+        // 如果 vehicle_state 存在，列出它的所有键
+        if (vehicleData.vehicle_state) {
+            console.log('vehicle_state 的所有键:', Object.keys(vehicleData.vehicle_state));
+        }
     }
     
+    console.log('最终使用的速度值:', speed);
     updateSpeed(speed);
     
     // 更新电池信息
