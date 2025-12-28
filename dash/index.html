@@ -111,6 +111,11 @@
                     <label for="updateInterval">更新间隔 (秒):</label>
                     <input type="number" id="updateInterval" value="2" min="1" max="10">
                 </div>
+                <div class="config-item">
+                    <label for="proxyUrl">CORS 代理 URL (可选):</label>
+                    <input type="text" id="proxyUrl" placeholder="例如: https://your-proxy.com/api/proxy">
+                    <small class="config-hint">由于 Tesla API 的 CORS 限制，需要代理服务器。留空则尝试直接调用（可能失败）</small>
+                </div>
             </div>
 
             <button class="btn-save" onclick="saveConfig()">保存配置</button>
