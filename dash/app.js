@@ -1001,8 +1001,34 @@ async function fetchVehicleData() {
 
 // 更新仪表盘
 function updateDashboard(vehicleData) {
-    // 更新速度
-    const speed = vehicleData.drive_state?.speed || 0;
+    // 更新速度 - 尝试多个可能的字段名
+    let speed = 0;
+    
+    // 尝试不同的字段路径
+    if (vehicleData.VehicleSpeed !== undefined && vehicleData.VehicleSpeed !== null) {
+        speed = vehicleData.VehicleSpeed;
+    } else if (vehicleData.vehicle_state?.VehicleSpeed !== undefined && vehicleData.vehicle_state?.VehicleSpeed !== null) {
+        speed = vehicleData.vehicle_state.VehicleSpeed;
+    } else if (vehicleData.drive_state?.speed !== undefined && vehicleData.drive_state?.speed !== null) {
+        speed = vehicleData.drive_state.speed;
+    } else if (vehicleData.vehicle_state?.speed !== undefined && vehicleData.vehicle_state?.speed !== null) {
+        speed = vehicleData.vehicle_state.speed;
+    } else if (vehicleData.speed !== undefined && vehicleData.speed !== null) {
+        speed = vehicleData.speed;
+    }
+    
+    // 调试日志
+    if (speed === 0) {
+        console.log('速度数据调试 - vehicleData:', vehicleData);
+        console.log('尝试的字段:', {
+            'VehicleSpeed': vehicleData.VehicleSpeed,
+            'vehicle_state.VehicleSpeed': vehicleData.vehicle_state?.VehicleSpeed,
+            'drive_state.speed': vehicleData.drive_state?.speed,
+            'vehicle_state.speed': vehicleData.vehicle_state?.speed,
+            'speed': vehicleData.speed
+        });
+    }
+    
     updateSpeed(speed);
     
     // 更新电池信息
