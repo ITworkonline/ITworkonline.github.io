@@ -1002,8 +1002,37 @@ async function fetchVehicleData() {
             
             // 检查 drive_state
             if (data.response.drive_state) {
-                console.log('drive_state:', data.response.drive_state);
+                console.log('✅ drive_state 存在:', data.response.drive_state);
                 console.log('drive_state 的键:', Object.keys(data.response.drive_state));
+            } else {
+                console.warn('❌ drive_state 不存在！尝试单独获取 drive_state...');
+                
+                // 如果 vehicle_data 没有返回 drive_state，尝试单独获取
+                try {
+                    const driveStateResponse = await fetch(driveStateApiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${config.apiToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (driveStateResponse.ok) {
+                        const driveStateData = await driveStateResponse.json();
+                        console.log('单独获取的 drive_state 响应:', driveStateData);
+                        if (driveStateData.response) {
+                            // 将 drive_state 添加到 response 中
+                            data.response.drive_state = driveStateData.response;
+                            console.log('✅ 成功获取 drive_state:', driveStateData.response);
+                            console.log('drive_state 的键:', Object.keys(driveStateData.response));
+                        }
+                    } else {
+                        const errorText = await driveStateResponse.text().catch(() => '');
+                        console.warn('单独获取 drive_state 失败:', driveStateResponse.status, errorText);
+                    }
+                } catch (driveStateError) {
+                    console.warn('单独获取 drive_state 出错:', driveStateError);
+                }
             }
             
             // 检查 vehicle_state
