@@ -1232,7 +1232,13 @@ async function fetchVehicleData() {
         if (!isVehicleData) {
             console.error('❌ 响应不是 vehicle_data，而是车辆列表对象:', data.response);
             console.error('响应键:', responseKeys);
-            throw new Error('获取到的是车辆列表对象，而不是 vehicle_data。请检查 API 端点是否正确。');
+            console.error('完整响应:', JSON.stringify(data, null, 2));
+            
+            // 如果响应是车辆列表对象，说明 API 端点可能有问题
+            // 或者代理返回了错误的响应
+            const errorMsg = `获取到的是车辆列表对象，而不是 vehicle_data。\n\n可能的原因：\n1. API 端点错误\n2. 代理服务器返回了错误的响应\n3. vehicleId 不正确\n\n响应键: ${responseKeys.join(', ')}\n\n请检查：\n- Vehicle ID 是否正确\n- 代理服务器是否正常工作\n- API URL 是否正确`;
+            updateConnectionStatus('error', errorMsg);
+            throw new Error(errorMsg);
         }
         
         // 调试：输出 response 对象的结构
