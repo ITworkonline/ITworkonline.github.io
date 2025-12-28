@@ -420,7 +420,8 @@ async function handleOAuthCallback() {
             client_id: config.clientId,
             client_secret: clientSecret,
             code: code,
-            redirect_uri: config.redirectUri
+            redirect_uri: config.redirectUri,
+            audience: TESLA_API_BASE  // 添加 audience 参数，指定 API 端点
         });
         
         console.log('Token 请求参数:', {
