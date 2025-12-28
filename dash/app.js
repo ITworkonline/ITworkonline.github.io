@@ -1135,34 +1135,62 @@ async function fetchVehicleData() {
             throw new Error(`API 错误: ${response.status} - ${errorData}`);
         }
         
+        // 检查响应内容类型
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('❌ 响应不是 JSON 格式:', text.substring(0, 200));
+            throw new Error(`服务器返回了非 JSON 响应: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         // 调试：输出完整的响应数据
         console.log('Tesla API 完整响应:', JSON.stringify(data, null, 2));
         
-        if (data.response) {
-            // 调试：输出 response 对象的结构
-            console.log('Response 对象:', data.response);
-            console.log('Response 对象的键:', Object.keys(data.response));
+        // 检查响应结构
+        if (!data.response) {
+            console.error('❌ 响应中没有 response 字段:', data);
+            throw new Error('无效的响应数据：缺少 response 字段');
+        }
+        
+        // 检查是否是 vehicle_data 响应（应该包含 drive_state, charge_state 等）
+        // 而不是车辆列表响应（只包含 id, vin 等）
+        const responseKeys = Object.keys(data.response);
+        const isVehicleData = responseKeys.some(key => 
+            ['drive_state', 'charge_state', 'vehicle_state', 'climate_state'].includes(key)
+        );
+        
+        if (!isVehicleData) {
+            console.error('❌ 响应不是 vehicle_data，而是车辆列表对象:', data.response);
+            console.error('响应键:', responseKeys);
+            throw new Error('获取到的是车辆列表对象，而不是 vehicle_data。请检查 API 端点是否正确。');
+        }
+        
+        // 调试：输出 response 对象的结构
+        console.log('✅ Response 对象是 vehicle_data:', data.response);
+        console.log('Response 对象的键:', Object.keys(data.response));
+        
+        // 检查 drive_state
+        if (data.response.drive_state) {
+            console.log('✅ drive_state 存在:', data.response.drive_state);
+            console.log('drive_state 的键:', Object.keys(data.response.drive_state));
+        } else {
+            console.warn('❌ drive_state 不存在！尝试单独获取 drive_state...');
             
-            // 检查 drive_state
-            if (data.response.drive_state) {
-                console.log('✅ drive_state 存在:', data.response.drive_state);
-                console.log('drive_state 的键:', Object.keys(data.response.drive_state));
-            } else {
-                console.warn('❌ drive_state 不存在！尝试单独获取 drive_state...');
+            // 如果 vehicle_data 没有返回 drive_state，尝试单独获取
+            try {
+                const driveStateResponse = await fetch(driveStateApiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${config.apiToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
                 
-                // 如果 vehicle_data 没有返回 drive_state，尝试单独获取
-                try {
-                    const driveStateResponse = await fetch(driveStateApiUrl, {
-                        method: 'GET',
-                        headers: {
-                            'Authorization': `Bearer ${config.apiToken}`,
-                            'Content-Type': 'application/json'
-                        }
-                    });
-                    
-                    if (driveStateResponse.ok) {
+                if (driveStateResponse.ok) {
+                    const driveStateContentType = driveStateResponse.headers.get('content-type');
+                    if (driveStateContentType && driveStateContentType.includes('application/json')) {
                         const driveStateData = await driveStateResponse.json();
                         console.log('单独获取的 drive_state 响应:', driveStateData);
                         if (driveStateData.response) {
@@ -1173,28 +1201,29 @@ async function fetchVehicleData() {
                         }
                     } else {
                         const errorText = await driveStateResponse.text().catch(() => '');
-                        console.warn('单独获取 drive_state 失败:', driveStateResponse.status, errorText);
+                        console.warn('单独获取 drive_state 失败: 响应不是 JSON', driveStateResponse.status, errorText.substring(0, 200));
                     }
-                } catch (driveStateError) {
-                    console.warn('单独获取 drive_state 出错:', driveStateError);
+                } else {
+                    const errorText = await driveStateResponse.text().catch(() => '');
+                    console.warn('单独获取 drive_state 失败:', driveStateResponse.status, errorText.substring(0, 200));
                 }
+            } catch (driveStateError) {
+                console.warn('单独获取 drive_state 出错:', driveStateError);
             }
-            
-            // 检查 vehicle_state
-            if (data.response.vehicle_state) {
-                console.log('vehicle_state:', data.response.vehicle_state);
-                console.log('vehicle_state 的键:', Object.keys(data.response.vehicle_state));
-            }
-            
-            updateDashboard(data.response);
-            updateConnectionStatus('connected', '已连接');
-            updateLastUpdateTime();
-            // 确保按钮在连接成功时显示
-            if (updateTimer) {
-                updateControlButtons(true);
-            }
-        } else {
-            throw new Error('无效的响应数据');
+        }
+        
+        // 检查 vehicle_state
+        if (data.response.vehicle_state) {
+            console.log('vehicle_state:', data.response.vehicle_state);
+            console.log('vehicle_state 的键:', Object.keys(data.response.vehicle_state));
+        }
+        
+        updateDashboard(data.response);
+        updateConnectionStatus('connected', '已连接');
+        updateLastUpdateTime();
+        // 确保按钮在连接成功时显示
+        if (updateTimer) {
+            updateControlButtons(true);
         }
         
     } catch (error) {
