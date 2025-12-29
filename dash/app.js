@@ -912,135 +912,6 @@ function generateRandomString(length) {
     return result;
 }
 
-// 检查 Fleet Telemetry 配置状态
-async function checkFleetTelemetryStatus() {
-    if (!config.apiToken || !config.vehicleId) {
-        throw new Error('请先登录并选择车辆');
-    }
-    
-    const url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
-    const apiUrl = config.proxyUrl 
-        ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
-        : url;
-    
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${config.apiToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.text().catch(() => response.statusText);
-            throw new Error(`获取配置状态失败: ${response.status} - ${errorData}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fleet Telemetry 配置状态:', data);
-        return data;
-    } catch (error) {
-        console.error('获取配置状态失败:', error);
-        throw error;
-    }
-}
-
-// 获取 Fleet Telemetry 错误日志
-async function getFleetTelemetryErrors() {
-    if (!config.apiToken || !config.vehicleId) {
-        throw new Error('请先登录并选择车辆');
-    }
-    
-    const url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_errors`;
-    const apiUrl = config.proxyUrl 
-        ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
-        : url;
-    
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${config.apiToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.text().catch(() => response.statusText);
-            throw new Error(`获取错误日志失败: ${response.status} - ${errorData}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fleet Telemetry 错误日志:', data);
-        return data;
-    } catch (error) {
-        console.error('获取错误日志失败:', error);
-        throw error;
-    }
-}
-
-// 配置 Fleet Telemetry（通过 API 命令）
-async function configureFleetTelemetry() {
-    if (!config.apiToken || !config.vehicleId) {
-        throw new Error('请先登录并选择车辆');
-    }
-    
-    if (!config.telemetryUrl) {
-        throw new Error('请先配置 Fleet Telemetry 服务器 URL');
-    }
-    
-    // 从 HTTP URL 转换为 WebSocket URL
-    const wsUrl = config.telemetryUrl.replace('https://', 'wss://').replace('http://', 'ws://') + '/telemetry';
-    
-    console.log('配置 Fleet Telemetry...');
-    console.log('WebSocket URL:', wsUrl);
-    console.log('车辆 ID:', config.vehicleId);
-    
-    const url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/command/fleet_telemetry_config`;
-    const apiUrl = config.proxyUrl 
-        ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
-        : url;
-    
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${config.apiToken}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                websocket_url: wsUrl,
-                fields: [4] // VehicleSpeed = 4 (根据 protobuf 定义)
-            })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.text().catch(() => response.statusText);
-            let errorJson;
-            try {
-                errorJson = JSON.parse(errorData);
-            } catch (e) {
-                errorJson = { error: errorData };
-            }
-            throw new Error(`配置失败: ${response.status} - ${JSON.stringify(errorJson)}`);
-        }
-        
-        const data = await response.json();
-        console.log('Fleet Telemetry 配置成功:', data);
-        
-        // 检查 synced 状态
-        if (data.response && data.response.synced === false) {
-            console.warn('⚠️ 配置已发送，但尚未同步。请等待几秒钟后检查状态。');
-        }
-        
-        return data;
-    } catch (error) {
-        console.error('配置 Fleet Telemetry 失败:', error);
-        throw error;
-    }
-}
-
 // 从 Fleet Telemetry 服务器获取速度数据
 async function fetchSpeedFromTelemetry() {
     if (!config.telemetryUrl || !config.vin) {
@@ -1048,15 +919,7 @@ async function fetchSpeedFromTelemetry() {
     }
     
     try {
-        // 确保 URL 格式正确（添加 https:// 如果缺失）
-        let telemetryUrl = config.telemetryUrl.trim();
-        if (!telemetryUrl.startsWith('http://') && !telemetryUrl.startsWith('https://')) {
-            telemetryUrl = 'https://' + telemetryUrl;
-        }
-        // 移除末尾的斜杠
-        telemetryUrl = telemetryUrl.replace(/\/$/, '');
-        
-        const url = `${telemetryUrl}/api/vehicle/${config.vin}`;
+        const url = `${config.telemetryUrl}/api/vehicle/${config.vin}`;
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -1097,24 +960,23 @@ async function fetchVehicleData() {
                     if (!window.telemetryUpdateCount) {
                         window.telemetryUpdateCount = 0;
                     }
-                    
                     window.telemetryUpdateCount++;
                     
-                    // 每 5 次更新一次其他数据（约每 2.5 秒）
                     if (window.telemetryUpdateCount >= 5) {
                         window.telemetryUpdateCount = 0;
-                        // 获取其他数据（电池、里程等）
-                        await fetchOtherVehicleData();
+                        // 异步获取其他数据，不阻塞速度更新
+                        fetchOtherVehicleData().catch(err => {
+                            console.warn('获取其他车辆数据失败:', err);
+                        });
                     }
-                    
-                    return; // 成功获取 Telemetry 速度，直接返回
-                } else {
-                    // 如果更新已停止，不获取数据
-                    return;
                 }
-            } else {
-                // Telemetry 获取失败，继续使用 Fleet API
-                console.warn('⚠️ 从 Telemetry 获取速度失败，尝试使用 Fleet API');
+                
+                updateConnectionStatus('connected', '已连接 (Telemetry)');
+                updateLastUpdateTime();
+                if (updateTimer) {
+                    updateControlButtons(true);
+                }
+                return;
             }
         }
         
@@ -1130,8 +992,6 @@ async function fetchVehicleData() {
         // 构建 API URL（使用代理或直接调用）
         // Tesla Fleet API 需要 endpoints 参数来指定要返回的数据
         // 可以指定多个 endpoints，用逗号分隔
-        // 注意：根据 Tesla Fleet API 文档，vehicle_data 端点可能需要不同的格式
-        // 如果返回车辆列表对象，说明端点可能不正确
         const baseUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/vehicle_data`;
         // 尝试请求所有可用的 endpoints
         const urlWithParams = `${baseUrl}?endpoints=drive_state,charge_state,vehicle_state,climate_state,gui_settings,vehicle_config`;
@@ -1140,7 +1000,6 @@ async function fetchVehicleData() {
             : urlWithParams;
         
         console.log('请求 vehicle_data URL:', apiUrl);
-        console.log('使用的 Vehicle ID:', config.vehicleId);
         
         // 准备单独获取 drive_state 的 URL（作为备用）
         const driveStateUrl = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/drive_state`;
@@ -1215,94 +1074,50 @@ async function fetchVehicleData() {
             throw new Error(`API 错误: ${response.status} - ${errorData}`);
         }
         
-        // 检查响应内容类型
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const text = await response.text();
-            console.error('❌ 响应不是 JSON 格式:', text.substring(0, 200));
-            throw new Error(`服务器返回了非 JSON 响应: ${response.status}`);
-        }
-        
         const data = await response.json();
         
         // 调试：输出完整的响应数据
         console.log('Tesla API 完整响应:', JSON.stringify(data, null, 2));
         
-        // 检查响应结构
-        if (!data.response) {
-            console.error('❌ 响应中没有 response 字段:', data);
-            throw new Error('无效的响应数据：缺少 response 字段');
+        // 检查是否返回了车辆列表而不是 vehicle_data
+        if (Array.isArray(data.response)) {
+            console.error('❌ API 返回了车辆列表而不是 vehicle_data！');
+            console.error('当前 Vehicle ID:', config.vehicleId);
+            console.error('响应数据:', data);
+            
+            updateConnectionStatus('error', `API 返回了车辆列表。请检查 Vehicle ID 是否正确（当前: ${config.vehicleId}）`);
+            
+            // 建议使用 Telemetry
+            if (!config.telemetryUrl || !config.vin) {
+                updateConnectionStatus('error', `API 返回了车辆列表。建议：\n1. 检查 Vehicle ID\n2. 配置 Fleet Telemetry 服务器 URL 和 VIN`);
+            }
+            
+            return;
         }
         
-        // 检查是否是 vehicle_data 响应（应该包含 drive_state, charge_state 等）
-        // 而不是车辆列表响应（只包含 id, vin 等）
-        const responseKeys = Object.keys(data.response);
-        const isVehicleData = responseKeys.some(key => 
-            ['drive_state', 'charge_state', 'vehicle_state', 'climate_state'].includes(key)
-        );
-        
-        if (!isVehicleData) {
-            console.error('❌ 响应不是 vehicle_data，而是车辆列表对象:', data.response);
-            console.error('响应键:', responseKeys);
-            console.error('完整响应:', JSON.stringify(data, null, 2));
-            console.error('请求的 URL:', apiUrl);
-            console.error('使用的 Vehicle ID:', config.vehicleId);
+        if (data.response) {
+            // 调试：输出 response 对象的结构
+            console.log('Response 对象:', data.response);
+            console.log('Response 对象的键:', Object.keys(data.response));
             
-            // 如果响应是车辆列表对象，说明 API 端点可能有问题
-            // 或者代理返回了错误的响应
-            // 尝试使用不同的端点格式
-            console.warn('⚠️ 尝试使用备用端点格式...');
-            
-            // 备用方案：如果 vehicle_data 端点返回错误，尝试直接使用各个单独的端点
-            // 但首先，我们需要检查是否是代理服务器的问题
-            const errorMsg = `API 返回了车辆列表对象而不是 vehicle_data。\n\n这通常意味着：\n1. Vehicle ID 可能不正确（当前: ${config.vehicleId}）\n2. API 端点格式可能有问题\n3. 代理服务器可能返回了错误的响应\n\n建议：\n- 优先使用 Fleet Telemetry 获取速度数据\n- 检查 Vehicle ID 是否正确\n- 如果必须使用 Fleet API，请检查 API 文档`;
-            
-            // 不抛出错误，而是记录警告，让 Telemetry 继续工作
-            console.warn(errorMsg);
-            updateConnectionStatus('warning', errorMsg);
-            
-            // 返回 null，让调用者知道获取失败
-            return null;
-        }
-        
-        // 调试：输出 response 对象的结构
-        console.log('✅ Response 对象是 vehicle_data:', data.response);
-        console.log('Response 对象的键:', Object.keys(data.response));
-        
-        // 再次验证（双重检查）- 在调用 updateDashboard 之前
-        const finalCheckKeys = Object.keys(data.response);
-        const finalIsVehicleData = finalCheckKeys.some(key => 
-            ['drive_state', 'charge_state', 'vehicle_state', 'climate_state'].includes(key)
-        );
-        
-        if (!finalIsVehicleData) {
-            console.error('❌ 最终验证失败：响应仍然不是 vehicle_data');
-            console.error('响应键:', finalCheckKeys);
-            const errorMsg = `API 返回了错误的响应格式。\n\n获取到的是车辆列表对象，而不是 vehicle_data。\n\n可能的原因：\n1. Vehicle ID 不正确: ${config.vehicleId}\n2. API 端点错误\n3. 代理服务器返回了错误的响应\n\n请检查 Vehicle ID 是否正确，或使用 Fleet Telemetry 获取速度数据。`;
-            updateConnectionStatus('error', errorMsg);
-            throw new Error('API 返回了错误的响应格式');
-        }
-        
-        // 检查 drive_state
-        if (data.response.drive_state) {
-            console.log('✅ drive_state 存在:', data.response.drive_state);
-            console.log('drive_state 的键:', Object.keys(data.response.drive_state));
-        } else {
-            console.warn('❌ drive_state 不存在！尝试单独获取 drive_state...');
-            
-            // 如果 vehicle_data 没有返回 drive_state，尝试单独获取
-            try {
-                const driveStateResponse = await fetch(driveStateApiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${config.apiToken}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
+            // 检查 drive_state
+            if (data.response.drive_state) {
+                console.log('✅ drive_state 存在:', data.response.drive_state);
+                console.log('drive_state 的键:', Object.keys(data.response.drive_state));
+            } else {
+                console.warn('❌ drive_state 不存在！尝试单独获取 drive_state...');
                 
-                if (driveStateResponse.ok) {
-                    const driveStateContentType = driveStateResponse.headers.get('content-type');
-                    if (driveStateContentType && driveStateContentType.includes('application/json')) {
+                // 如果 vehicle_data 没有返回 drive_state，尝试单独获取
+                try {
+                    const driveStateResponse = await fetch(driveStateApiUrl, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${config.apiToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (driveStateResponse.ok) {
                         const driveStateData = await driveStateResponse.json();
                         console.log('单独获取的 drive_state 响应:', driveStateData);
                         if (driveStateData.response) {
@@ -1313,61 +1128,33 @@ async function fetchVehicleData() {
                         }
                     } else {
                         const errorText = await driveStateResponse.text().catch(() => '');
-                        console.warn('单独获取 drive_state 失败: 响应不是 JSON', driveStateResponse.status, errorText.substring(0, 200));
+                        console.warn('单独获取 drive_state 失败:', driveStateResponse.status, errorText);
                     }
-                } else {
-                    const errorText = await driveStateResponse.text().catch(() => '');
-                    console.warn('单独获取 drive_state 失败:', driveStateResponse.status, errorText.substring(0, 200));
+                } catch (driveStateError) {
+                    console.warn('单独获取 drive_state 出错:', driveStateError);
                 }
-            } catch (driveStateError) {
-                console.warn('单独获取 drive_state 出错:', driveStateError);
             }
-        }
-        
-        // 检查 vehicle_state
-        if (data.response.vehicle_state) {
-            console.log('vehicle_state:', data.response.vehicle_state);
-            console.log('vehicle_state 的键:', Object.keys(data.response.vehicle_state));
-        }
-        
-        // 再次验证（双重检查）
-        const finalKeys = Object.keys(data.response);
-        const hasVehicleDataFields = finalKeys.some(key => 
-            ['drive_state', 'charge_state', 'vehicle_state', 'climate_state'].includes(key)
-        );
-        
-        if (!hasVehicleDataFields) {
-            console.error('❌ 验证失败：响应仍然不是 vehicle_data');
-            console.error('响应键:', finalKeys);
-            console.error('请求的 URL:', apiUrl);
-            console.error('使用的 Vehicle ID:', config.vehicleId);
             
-            // 如果最终验证失败，返回 null 而不是抛出错误
-            // 这样可以让 Telemetry 继续工作
-            const errorMsg = `API 返回了错误的响应格式。\n\n获取到的是车辆列表对象，而不是 vehicle_data。\n\nVehicle ID: ${config.vehicleId}\n\n建议：\n- 优先使用 Fleet Telemetry 获取速度数据\n- 检查 Vehicle ID 是否正确\n- 如果必须使用 Fleet API，请检查 API 文档`;
-            updateConnectionStatus('warning', errorMsg);
-            return null; // 返回 null 而不是抛出错误
-        }
-        
-        updateDashboard(data.response);
-        updateConnectionStatus('connected', '已连接');
-        updateLastUpdateTime();
-        // 确保按钮在连接成功时显示
-        if (updateTimer) {
-            updateControlButtons(true);
+            // 检查 vehicle_state
+            if (data.response.vehicle_state) {
+                console.log('vehicle_state:', data.response.vehicle_state);
+                console.log('vehicle_state 的键:', Object.keys(data.response.vehicle_state));
+            }
+            
+            updateDashboard(data.response);
+            updateConnectionStatus('connected', '已连接');
+            updateLastUpdateTime();
+            // 确保按钮在连接成功时显示
+            if (updateTimer) {
+                updateControlButtons(true);
+            }
+        } else {
+            throw new Error('无效的响应数据');
         }
         
     } catch (error) {
         console.error('获取车辆数据失败:', error);
-        
-        // 如果配置了 Telemetry，即使 Fleet API 失败也不要显示错误
-        // 因为 Telemetry 可能仍然在工作
-        if (config.telemetryUrl && config.vin) {
-            console.warn('⚠️ Fleet API 获取失败，但 Telemetry 可能仍在工作');
-            // 不更新状态，让 Telemetry 继续工作
-        } else {
-            updateConnectionStatus('error', `获取车辆数据失败: ${error.message}`);
-        }
+        updateConnectionStatus('error', `错误: ${error.message}`);
     }
 }
 
@@ -1535,110 +1322,17 @@ function updateDashboard(vehicleData) {
         const batteryLevel = chargeState.battery_level || 0;
         const chargingState = chargeState.charging_state || 'Unknown';
         
-        document.getElementById('batteryValue').textContent = Math.round(batteryLevel);
+        document.getElementById('batteryLevel').textContent = `${batteryLevel}%`;
+        document.getElementById('chargingState').textContent = 
+            chargingState === 'Charging' ? '充电中' : 
+            chargingState === 'Disconnected' ? '未连接' : 
+            chargingState === 'Complete' ? '已完成' : '待机';
     }
     
     // 更新里程
     const odometer = vehicleData.vehicle_state?.odometer;
     if (odometer) {
-        document.getElementById('odometerValue').textContent = `${odometer.toFixed(1)} km`;
-    }
-}
-
-// 检查 Telemetry 状态（UI 调用）
-async function checkTelemetryStatus() {
-    try {
-        updateOAuthStatus('loading', '正在检查 Fleet Telemetry 状态...');
-        
-        const status = await checkFleetTelemetryStatus();
-        
-        if (status.response) {
-            const synced = status.response.synced;
-            const websocketUrl = status.response.websocket_url;
-            const fields = status.response.fields || [];
-            
-            let message = `Fleet Telemetry 配置状态:\n\n`;
-            message += `同步状态: ${synced ? '✅ 已同步' : '⏳ 未同步'}\n`;
-            message += `WebSocket URL: ${websocketUrl || '未配置'}\n`;
-            message += `订阅字段: ${fields.length > 0 ? fields.join(', ') : '无'}\n`;
-            
-            if (synced) {
-                updateOAuthStatus('success', message);
-            } else {
-                updateOAuthStatus('warning', message + '\n\n请等待车辆处理配置。');
-            }
-        } else {
-            updateOAuthStatus('error', '无法获取配置状态');
-        }
-    } catch (error) {
-        console.error('检查状态失败:', error);
-        updateOAuthStatus('error', `检查状态失败: ${error.message}`);
-    }
-}
-
-// 设置 Fleet Telemetry（UI 调用）
-async function setupTelemetry() {
-    try {
-        updateOAuthStatus('loading', '正在配置 Fleet Telemetry...');
-        
-        // 保存当前配置
-        saveConfig();
-        
-        // 检查必要配置
-        if (!config.apiToken || !config.vehicleId) {
-            throw new Error('请先登录并选择车辆');
-        }
-        
-        if (!config.telemetryUrl) {
-            throw new Error('请先配置 Fleet Telemetry 服务器 URL');
-        }
-        
-        // 配置 Telemetry
-        const configResult = await configureFleetTelemetry();
-        
-        // 等待 2 秒后检查状态
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // 检查配置状态
-        try {
-            const status = await checkFleetTelemetryStatus();
-            if (status.response) {
-                const synced = status.response.synced;
-                const websocketUrl = status.response.websocket_url;
-                
-                if (synced === true) {
-                    updateOAuthStatus('success', `✅ Fleet Telemetry 配置成功并已同步！\n\nWebSocket URL: ${websocketUrl}\n\n车辆现在会开始发送数据到服务器。\n请等待几秒钟后点击"开始读取"。`);
-                } else {
-                    updateOAuthStatus('warning', `⚠️ 配置已发送，但尚未同步。\n\n请等待车辆处理配置（可能需要几分钟）。\n\n你可以稍后点击"检查状态"按钮查看同步状态。`);
-                }
-            }
-        } catch (statusError) {
-            console.warn('检查配置状态失败:', statusError);
-            updateOAuthStatus('success', '✅ Fleet Telemetry 配置已发送！\n\n请等待车辆处理配置（可能需要几分钟）。\n\n如果遇到问题，可以查看错误日志。');
-        }
-        
-        // 5 秒后自动开始读取
-        setTimeout(() => {
-            if (!updateTimer) {
-                startUpdates();
-            }
-        }, 5000);
-        
-    } catch (error) {
-        console.error('设置 Telemetry 失败:', error);
-        
-        // 尝试获取错误日志
-        try {
-            const errors = await getFleetTelemetryErrors();
-            if (errors.response && errors.response.length > 0) {
-                const errorMessages = errors.response.map(e => e.message || e.error).join('\n');
-                updateOAuthStatus('error', `配置失败: ${error.message}\n\n错误详情:\n${errorMessages}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）\n4. 虚拟密钥是否已配对到车辆`);
-            } else {
-                updateOAuthStatus('error', `配置失败: ${error.message}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）\n4. 虚拟密钥是否已配对到车辆`);
-            }
-        } catch (errorLogError) {
-            updateOAuthStatus('error', `配置失败: ${error.message}\n\n请检查：\n1. 车辆是否已唤醒\n2. 车辆固件版本是否为 2024.26 或更高\n3. 车辆是否为 2021 年后（Model S/X 除外）\n4. 虚拟密钥是否已配对到车辆`);
-        }
+        document.getElementById('odometer').textContent = `${odometer.toFixed(1)} km`;
     }
 }
 
