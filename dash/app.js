@@ -1007,16 +1007,22 @@ async function handleOAuthCallback() {
         
         // 如果是 Client Secret 相关错误，聚焦到输入框
         if (errorMessage.includes('Client Secret')) {
-            const secretInput = document.getElementById('clientSecret');
-            if (secretInput) {
-                secretInput.focus();
-                // 高亮显示输入框
-                secretInput.style.borderColor = '#ff0000';
-                secretInput.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.5)';
-                setTimeout(() => {
-                    secretInput.style.borderColor = '';
-                    secretInput.style.boxShadow = '';
-                }, 3000);
+            try {
+                const secretInput = document.getElementById('clientSecret');
+                if (secretInput) {
+                    secretInput.focus();
+                    // 高亮显示输入框
+                    secretInput.style.borderColor = '#ff0000';
+                    secretInput.style.boxShadow = '0 0 10px rgba(255, 0, 0, 0.5)';
+                    setTimeout(() => {
+                        if (secretInput) {
+                            secretInput.style.borderColor = '';
+                            secretInput.style.boxShadow = '';
+                        }
+                    }, 3000);
+                }
+            } catch (e) {
+                console.warn('无法聚焦到 clientSecret 输入框:', e);
             }
         }
         
@@ -1174,8 +1180,12 @@ async function fetchVehicles() {
 // 更新 OAuth 状态显示
 function updateOAuthStatus(type, message) {
     const statusDiv = document.getElementById('oauthStatus');
-    statusDiv.className = `oauth-status oauth-${type}`;
-    statusDiv.textContent = message;
+    if (statusDiv) {
+        statusDiv.className = `oauth-status oauth-${type}`;
+        statusDiv.textContent = message;
+    } else {
+        console.warn('oauthStatus 元素不存在，无法更新状态:', message);
+    }
 }
 
 // 生成随机字符串
