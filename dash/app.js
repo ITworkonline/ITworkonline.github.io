@@ -14,9 +14,8 @@ let config = {
     partnerTokenExpiresAt: 0,
     vehicleId: '',
     vin: '', // 车辆 VIN（用于 Fleet Telemetry）
-    updateInterval: 2,
-    proxyUrl: '', // CORS 代理 URL（可选）
-    telemetryUrl: '' // Fleet Telemetry 服务器 URL（可选）
+    telemetryUrl: '', // Fleet Telemetry 服务器 URL（HTTP）
+    websocketUrl: '' // Fleet Telemetry WebSocket URL（wss://，用于配置车辆）
 };
 
 let updateTimer = null;
@@ -111,6 +110,16 @@ function saveConfig() {
     if (vinInput) {
         config.vin = vinInput.value.trim();
     }
+    const websocketInput = document.getElementById('websocketUrl');
+    if (websocketInput) {
+        config.websocketUrl = websocketInput.value.trim();
+        // 如果 websocketUrl 为空，但 telemetryUrl 有值，自动生成
+        if (!config.websocketUrl && config.telemetryUrl) {
+            const wsUrl = config.telemetryUrl.replace('https://', 'wss://').replace('http://', 'ws://') + '/telemetry';
+            config.websocketUrl = wsUrl;
+            websocketInput.value = wsUrl;
+        }
+    }
     
     localStorage.setItem('teslaDashConfig', JSON.stringify(config));
     
@@ -125,6 +134,103 @@ function saveConfig() {
     
     toggleConfig();
     alert('配置已保存！');
+}
+
+// 配置车辆 Fleet Telemetry
+async function configureFleetTelemetry() {
+    const statusDiv = document.getElementById('telemetryConfigStatus');
+    statusDiv.style.display = 'block';
+    statusDiv.textContent = '正在配置...';
+    statusDiv.style.background = '#333';
+    statusDiv.style.color = '#fff';
+    
+    try {
+        // 检查必要配置
+        if (!config.vin) {
+            throw new Error('请先填写车辆 VIN');
+        }
+        
+        if (!config.websocketUrl) {
+            // 尝试从 telemetryUrl 生成
+            if (config.telemetryUrl) {
+                config.websocketUrl = config.telemetryUrl.replace('https://', 'wss://').replace('http://', 'ws://') + '/telemetry';
+            } else {
+                throw new Error('请填写 WebSocket URL 或 Telemetry 服务器 URL');
+            }
+        }
+        
+        // 检查是否有 API Token（用于调用 Fleet API）
+        if (!config.apiToken) {
+            statusDiv.textContent = '⚠️ 需要 API Token 来配置车辆。请先通过 OAuth 登录获取 Token。';
+            statusDiv.style.background = '#ffaa00';
+            statusDiv.style.color = '#000';
+            return;
+        }
+        
+        // 检查是否有 Vehicle ID
+        if (!config.vehicleId) {
+            statusDiv.textContent = '⚠️ 需要 Vehicle ID。请先获取车辆列表。';
+            statusDiv.style.background = '#ffaa00';
+            statusDiv.style.color = '#000';
+            return;
+        }
+        
+        console.log('配置 Fleet Telemetry...');
+        console.log('Vehicle ID:', config.vehicleId);
+        console.log('VIN:', config.vin);
+        console.log('WebSocket URL:', config.websocketUrl);
+        
+        // 调用 fleet_telemetry_config 端点
+        // 注意：根据文档，新应用需要通过 vehicle-command proxy 调用
+        // 这里尝试直接调用（适用于旧应用或使用 CSR 的应用）
+        const url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
+        const apiUrl = config.proxyUrl 
+            ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
+            : url;
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${config.apiToken}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                websocket_url: config.websocketUrl,
+                fields: [4, 5, 42] // VehicleSpeed, Odometer, BatteryLevel
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: await response.text() }));
+            throw new Error(`配置失败: ${response.status} - ${JSON.stringify(errorData)}`);
+        }
+        
+        const data = await response.json();
+        console.log('Fleet Telemetry 配置响应:', data);
+        
+        if (data.response) {
+            statusDiv.textContent = `✅ 配置成功！状态: ${data.response.synced ? '已同步' : '同步中...'}`;
+            statusDiv.style.background = '#00ff00';
+            statusDiv.style.color = '#000';
+            
+            if (!data.response.synced) {
+                statusDiv.textContent += '\n⚠️ 请等待同步完成（synced: true）';
+            }
+        } else {
+            throw new Error('无效的响应数据');
+        }
+        
+    } catch (error) {
+        console.error('配置 Fleet Telemetry 失败:', error);
+        statusDiv.textContent = `❌ 配置失败: ${error.message}`;
+        statusDiv.style.background = '#ff0000';
+        statusDiv.style.color = '#fff';
+        
+        // 如果是 400/401 错误，提示可能需要 vehicle-command proxy
+        if (error.message.includes('400') || error.message.includes('401')) {
+            statusDiv.textContent += '\n\n提示：新应用可能需要通过 vehicle-command proxy 调用此端点。\n请参考 FLEET_TELEMETRY_COMPLETE_SETUP.md 文档。';
+        }
+    }
 }
 
 // 切换配置面板

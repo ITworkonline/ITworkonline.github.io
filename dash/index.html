@@ -98,13 +98,22 @@
                 <div class="config-item">
                     <label for="telemetryUrl">Telemetry 服务器 URL:</label>
                     <input type="text" id="telemetryUrl" placeholder="例如: https://your-telemetry.railway.app" required>
-                    <small class="config-hint">部署在 Railway/Render 等平台的 Telemetry 服务器 URL</small>
+                    <small class="config-hint">部署在 Railway/Render 等平台的 Telemetry 服务器 URL（HTTP，不是 WebSocket）</small>
                 </div>
                 <div class="config-item">
                     <label for="vin">车辆 VIN:</label>
                     <input type="text" id="vin" placeholder="5YJ3E1EA1KF123456" required>
                     <small class="config-hint">车辆识别码，可在 Tesla 应用中查看，或查看前挡风玻璃左下角</small>
                 </div>
+                <div class="config-item">
+                    <label for="websocketUrl">WebSocket URL（用于配置车辆）:</label>
+                    <input type="text" id="websocketUrl" placeholder="例如: wss://your-telemetry.railway.app/telemetry">
+                    <small class="config-hint">用于配置车辆的 WebSocket URL（wss://），通常与服务器 URL 相同但使用 wss:// 协议</small>
+                </div>
+                <button class="btn-config-telemetry" onclick="configureFleetTelemetry()" style="margin-top: 10px; width: 100%; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-size: 14px; cursor: pointer;">
+                    ⚙️ 配置车辆 Fleet Telemetry
+                </button>
+                <div id="telemetryConfigStatus" style="margin-top: 10px; padding: 8px; border-radius: 4px; font-size: 12px; display: none;"></div>
             </div>
 
             <button class="btn-save" onclick="saveConfig()">保存配置</button>
