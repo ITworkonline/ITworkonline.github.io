@@ -92,6 +92,18 @@
 
             <div class="config-divider"></div>
 
+            <!-- CORS 代理配置 -->
+            <div class="config-section">
+                <h4>CORS 代理配置（解决 CORS 错误）</h4>
+                <div class="config-item">
+                    <label for="proxyUrl">CORS 代理 URL:</label>
+                    <input type="text" id="proxyUrl" placeholder="例如: https://tesla-proxy-k4cr.vercel.app/api/proxy">
+                    <small class="config-hint">用于解决 CORS 错误的代理服务器 URL。如果遇到 CORS 错误，请填写此字段。你的代理服务器应该部署在 Vercel 或其他平台。</small>
+                </div>
+            </div>
+
+            <div class="config-divider"></div>
+
             <!-- Fleet Telemetry 配置 -->
             <div class="config-section">
                 <h4>Fleet Telemetry 配置（必需）</h4>

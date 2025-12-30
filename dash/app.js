@@ -113,6 +113,17 @@ function loadConfig() {
 
 // 保存配置
 function saveConfig() {
+    // 保存代理 URL
+    const proxyInput = document.getElementById('proxyUrl');
+    if (proxyInput) {
+        config.proxyUrl = proxyInput.value.trim();
+        // 自动添加 https:// 协议（如果没有）
+        if (config.proxyUrl && !config.proxyUrl.startsWith('http://') && !config.proxyUrl.startsWith('https://')) {
+            config.proxyUrl = 'https://' + config.proxyUrl;
+            proxyInput.value = config.proxyUrl;
+        }
+    }
+    
     const telemetryInput = document.getElementById('telemetryUrl');
     if (telemetryInput) {
         config.telemetryUrl = telemetryInput.value.trim();
