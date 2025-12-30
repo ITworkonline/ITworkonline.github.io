@@ -369,6 +369,7 @@ function toggleConfig() {
 window.toggleConfig = toggleConfig;
 window.saveConfig = saveConfig;
 window.configureFleetTelemetry = configureFleetTelemetry;
+window.startOAuthLogin = startOAuthLogin;
 
 // 初始化速度表盘
 function initializeSpeedometer() {
@@ -685,42 +686,66 @@ async function refreshAccessToken(skipTimerCheck = false) {
 // 启动 OAuth 登录
 function startOAuthLogin() {
     try {
-        const clientId = document.getElementById('clientId').value.trim();
-        const redirectUri = document.getElementById('redirectUri').value.trim();
+        console.log('=== 开始 OAuth 登录流程 ===');
         
-        console.log('开始 OAuth 登录流程...');
+        const clientIdInput = document.getElementById('clientId');
+        const redirectUriInput = document.getElementById('redirectUri');
+        const clientSecretInput = document.getElementById('clientSecret');
+        
+        if (!clientIdInput || !redirectUriInput || !clientSecretInput) {
+            console.error('找不到必要的输入元素');
+            alert('错误：找不到配置输入框，请刷新页面重试');
+            return;
+        }
+        
+        const clientId = clientIdInput.value.trim();
+        const redirectUri = redirectUriInput.value.trim();
+        const clientSecret = clientSecretInput.value.trim();
+        
         console.log('Client ID:', clientId ? clientId.substring(0, 10) + '...' : '未填写');
         console.log('Redirect URI:', redirectUri);
+        console.log('Client Secret:', clientSecret ? '已填写（长度: ' + clientSecret.length + '）' : '未填写');
         console.log('Auth Base:', TESLA_AUTH_BASE);
         
+        // 验证所有必填字段
         if (!clientId) {
             alert('请先填写 Client ID');
             updateOAuthStatus('error', '请先填写 Client ID');
+            clientIdInput.focus();
             return;
         }
         
         if (!redirectUri) {
             alert('请先填写 Redirect URI');
             updateOAuthStatus('error', '请先填写 Redirect URI');
+            redirectUriInput.focus();
+            return;
+        }
+        
+        if (!clientSecret) {
+            alert('请先填写 Client Secret！\n\n这是必需的，用于 OAuth 认证。');
+            updateOAuthStatus('error', '请先填写 Client Secret');
+            clientSecretInput.focus();
             return;
         }
         
         // 验证 Redirect URI 格式
+        let redirectUriObj;
         try {
-            new URL(redirectUri);
+            redirectUriObj = new URL(redirectUri);
         } catch (e) {
-            alert('Redirect URI 格式不正确，请使用完整的 URL（例如：https://blog.itworkonline.top/dash）');
+            alert('Redirect URI 格式不正确，请使用完整的 URL（例如：https://blog.itworkonline.top/dash）\n\n错误: ' + e.message);
             updateOAuthStatus('error', 'Redirect URI 格式不正确');
+            redirectUriInput.focus();
             return;
         }
         
-        // 获取并验证 Client Secret
-        const clientSecret = document.getElementById('clientSecret').value.trim();
-        if (!clientSecret) {
-            alert('请先填写 Client Secret！\n\n这是必需的，用于 OAuth 认证。');
-            updateOAuthStatus('error', '请先填写 Client Secret');
-            document.getElementById('clientSecret').focus();
-            return;
+        // 确保使用 HTTPS（生产环境）
+        if (redirectUriObj.protocol !== 'https:' && window.location.protocol === 'https:') {
+            const useHttps = confirm('Redirect URI 使用的是 ' + redirectUriObj.protocol + ' 协议，但当前页面使用 HTTPS。\n\n建议使用 HTTPS 协议以确保安全。\n\n是否继续？');
+            if (!useHttps) {
+                return;
+            }
         }
         
         // 保存配置（包括 clientSecret）
@@ -729,12 +754,12 @@ function startOAuthLogin() {
         config.redirectUri = redirectUri;
         localStorage.setItem('teslaDashConfig', JSON.stringify(config));
         
-        console.log('已保存配置 - Client ID:', clientId.substring(0, 10) + '...');
-        console.log('已保存配置 - Client Secret:', clientSecret ? '已设置（长度: ' + clientSecret.length + '）' : '未设置');
+        console.log('✅ 配置已保存');
         
         // 生成 state 参数（用于防止 CSRF 攻击）
         const state = generateRandomString(32);
         sessionStorage.setItem('oauth_state', state);
+        console.log('✅ State 已生成:', state.substring(0, 10) + '...');
         
         // 构建授权 URL
         const authUrl = new URL(`${TESLA_AUTH_BASE}/oauth2/v3/authorize`);
@@ -744,15 +769,20 @@ function startOAuthLogin() {
         authUrl.searchParams.set('scope', 'openid offline_access vehicle_device_data vehicle_cmds');
         authUrl.searchParams.set('state', state);
         
-        console.log('准备跳转到授权页面:', authUrl.toString());
+        const finalAuthUrl = authUrl.toString();
+        console.log('✅ 授权 URL 已构建:', finalAuthUrl);
         updateOAuthStatus('loading', '正在跳转到 Tesla 登录页面...');
         
-        // 跳转到授权页面
-        window.location.href = authUrl.toString();
+        // 延迟一下，确保状态更新显示
+        setTimeout(() => {
+            console.log('🚀 开始跳转到 Tesla 登录页面...');
+            window.location.href = finalAuthUrl;
+        }, 100);
         
     } catch (error) {
-        console.error('OAuth 登录错误:', error);
-        alert('登录失败: ' + error.message);
+        console.error('❌ OAuth 登录错误:', error);
+        console.error('错误堆栈:', error.stack);
+        alert('登录失败: ' + error.message + '\n\n请查看浏览器控制台获取详细信息。');
         updateOAuthStatus('error', '错误: ' + error.message);
     }
 }
