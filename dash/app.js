@@ -602,9 +602,15 @@ async function refreshAccessToken(skipTimerCheck = false) {
         config.tokenExpiresAt = Date.now() + (data.expires_in * 1000);
         
         localStorage.setItem('teslaDashConfig', JSON.stringify(config));
-        const apiTokenInput = document.getElementById('apiToken');
-        if (apiTokenInput) {
-            apiTokenInput.value = config.apiToken;
+        // 尝试更新 apiToken 输入框（如果存在）
+        try {
+            const apiTokenInput = document.getElementById('apiToken');
+            if (apiTokenInput) {
+                apiTokenInput.value = config.apiToken;
+            }
+        } catch (e) {
+            // 输入框不存在也没关系，继续执行
+            console.log('apiToken 输入框不存在，跳过更新');
         }
         
         // 只有在有定时器时才启动更新（避免在配置时启动）
@@ -1079,7 +1085,12 @@ async function fetchVehicleDataFromTelemetry() {
     }
     
     try {
-        const url = `${config.telemetryUrl}/api/vehicle/${config.vin}`;
+        // 确保 telemetryUrl 是完整的 URL（包含协议）
+        let telemetryUrl = config.telemetryUrl;
+        if (!telemetryUrl.startsWith('http://') && !telemetryUrl.startsWith('https://')) {
+            telemetryUrl = 'https://' + telemetryUrl;
+        }
+        const url = `${telemetryUrl}/api/vehicle/${config.vin}`;
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -1109,7 +1120,12 @@ async function fetchSpeedFromTelemetry() {
     }
     
     try {
-        const url = `${config.telemetryUrl}/api/vehicle/${config.vin}`;
+        // 确保 telemetryUrl 是完整的 URL（包含协议）
+        let telemetryUrl = config.telemetryUrl;
+        if (!telemetryUrl.startsWith('http://') && !telemetryUrl.startsWith('https://')) {
+            telemetryUrl = 'https://' + telemetryUrl;
+        }
+        const url = `${telemetryUrl}/api/vehicle/${config.vin}`;
         const response = await fetch(url, {
             method: 'GET',
             headers: {
@@ -1323,19 +1339,18 @@ async function fetchVehicleData() {
         
         // 检查是否返回了车辆基本信息对象（而不是 vehicle_data）
         if (data.response && (data.response.id || data.response.vin) && !data.response.charge_state && !data.response.vehicle_state) {
-            console.error('❌ API 返回了车辆基本信息对象而不是 vehicle_data！');
-            console.error('当前 Vehicle ID:', config.vehicleId);
-            console.error('响应对象键:', Object.keys(data.response));
-            console.error('响应数据:', data.response);
+            console.warn('⚠️ API 返回了车辆基本信息对象而不是 vehicle_data');
+            console.log('当前 Vehicle ID:', config.vehicleId);
+            console.log('响应对象键:', Object.keys(data.response));
             
-            const errorMsg = `API 返回了车辆信息而不是车辆数据。\n\n` +
-                `当前 Vehicle ID: ${config.vehicleId}\n` +
-                `车辆 VIN: ${data.response.vin || 'N/A'}\n\n` +
-                `建议：\n` +
-                `1. 配置 Fleet Telemetry 服务器 URL 和 VIN 以获取实时速度\n` +
-                `2. 或检查 Vehicle ID 是否正确`;
-            
-            updateConnectionStatus('error', errorMsg);
+            // 如果返回了 vehicle_id，尝试使用它
+            if (data.response.vehicle_id && data.response.vehicle_id !== config.vehicleId) {
+                console.log('检测到 vehicle_id，更新配置:', data.response.vehicle_id);
+                config.vehicleId = data.response.vehicle_id;
+                localStorage.setItem('teslaDashConfig', JSON.stringify(config));
+                // 重新尝试获取数据
+                return await fetchVehicleData();
+            }
             
             // 如果返回了 VIN，自动填充
             if (data.response.vin && !config.vin) {
@@ -1345,7 +1360,14 @@ async function fetchVehicleData() {
                     vinInput.value = config.vin;
                     console.log('✅ 自动填充 VIN:', config.vin);
                 }
-                saveConfig();
+                localStorage.setItem('teslaDashConfig', JSON.stringify(config));
+            }
+            
+            // 如果配置了 Telemetry，提示使用 Telemetry
+            if (config.telemetryUrl && config.vin) {
+                updateConnectionStatus('error', 'API 返回了车辆信息而不是车辆数据。\n\n建议：使用 Fleet Telemetry 服务器获取实时数据（已配置）');
+            } else {
+                updateConnectionStatus('error', 'API 返回了车辆信息而不是车辆数据。\n\n建议：\n1. 配置 Fleet Telemetry 服务器 URL 和 VIN\n2. 或检查 Vehicle ID 是否正确');
             }
             
             return;
