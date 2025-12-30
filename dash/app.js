@@ -239,14 +239,16 @@ async function configureFleetTelemetry() {
         console.log('WebSocket URL:', config.websocketUrl);
         
         // 调用 fleet_telemetry_config 端点
-        // 注意：根据文档，新应用需要通过 vehicle-command proxy 调用
-        // 这里尝试直接调用（适用于旧应用或使用 CSR 的应用）
-        const url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
-        const apiUrl = config.proxyUrl 
+        // 注意：根据文档，新应用可能需要通过 vehicle-command proxy 调用
+        // 先尝试使用 /command/fleet_telemetry_config 端点（新应用）
+        // 如果失败，再尝试 /fleet_telemetry_config 端点（旧应用）
+        let url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/command/fleet_telemetry_config`;
+        let apiUrl = config.proxyUrl 
             ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
             : url;
         
-        const response = await fetch(apiUrl, {
+        console.log('尝试配置 Fleet Telemetry (使用 command 端点)...');
+        let response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${config.apiToken}`,
@@ -257,6 +259,27 @@ async function configureFleetTelemetry() {
                 fields: [4, 5, 42] // VehicleSpeed, Odometer, BatteryLevel
             })
         });
+        
+        // 如果 command 端点失败（404 或 405），尝试旧端点
+        if (response.status === 404 || response.status === 405) {
+            console.log('command 端点不可用，尝试使用旧端点...');
+            url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
+            apiUrl = config.proxyUrl 
+                ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
+                : url;
+            
+            response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${config.apiToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    websocket_url: config.websocketUrl,
+                    fields: [4, 5, 42] // VehicleSpeed, Odometer, BatteryLevel
+                })
+            });
+        }
         
         if (!response.ok) {
             let errorData;
@@ -280,18 +303,25 @@ async function configureFleetTelemetry() {
             // 根据状态码提供更友好的错误信息
             let errorMessage = `配置失败: ${response.status}`;
             if (response.status === 500) {
-                errorMessage += '\n\n服务器内部错误。可能原因：\n1. 代理服务器配置问题\n2. Tesla API 暂时不可用\n3. 请求格式不正确\n\n建议：\n1. 检查代理服务器是否正常运行\n2. 稍后重试\n3. 查看服务器日志获取详细信息';
+                errorMessage += '\n\n服务器内部错误。可能原因：\n1. 代理服务器配置问题\n2. Tesla API 暂时不可用\n3. 请求格式不正确\n4. 新应用需要使用 vehicle-command proxy（需要私钥签名）\n\n建议：\n1. 检查代理服务器是否正常运行\n2. 查看完整错误信息（下方）\n3. 如果是新应用，可能需要部署 vehicle-command proxy 服务器\n4. 查看 Tesla 开发者文档了解最新要求';
             } else if (response.status === 401) {
                 errorMessage += '\n\n认证失败。Token 可能已过期，请重新登录。';
             } else if (response.status === 400) {
                 errorMessage += '\n\n请求参数错误。请检查 WebSocket URL 格式是否正确。';
+            } else if (response.status === 404) {
+                errorMessage += '\n\n端点不存在。可能是：\n1. Vehicle ID 不正确\n2. 应用类型不支持此端点\n3. 需要使用 vehicle-command proxy';
             }
             
             if (errorData.error) {
                 errorMessage += `\n\n错误详情: ${errorData.error}`;
             }
             if (errorData.message) {
-                errorMessage += `\n${errorData.message}`;
+                errorMessage += `\n消息: ${errorData.message}`;
+            }
+            
+            // 显示完整的错误响应（用于调试）
+            if (errorText && errorText.length < 500) {
+                errorMessage += `\n\n完整响应:\n${errorText}`;
             }
             
             throw new Error(errorMessage);
