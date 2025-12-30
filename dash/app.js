@@ -103,16 +103,6 @@ function loadConfig() {
 
 // 保存配置
 function saveConfig() {
-    config.clientId = document.getElementById('clientId').value.trim();
-    config.clientSecret = document.getElementById('clientSecret').value.trim();
-    config.redirectUri = document.getElementById('redirectUri').value.trim();
-    config.apiToken = document.getElementById('apiToken').value.trim();
-    config.vehicleId = document.getElementById('vehicleId').value.trim();
-    config.updateInterval = parseInt(document.getElementById('updateInterval').value) || 2;
-    const proxyInput = document.getElementById('proxyUrl');
-    if (proxyInput) {
-        config.proxyUrl = proxyInput.value.trim();
-    }
     const telemetryInput = document.getElementById('telemetryUrl');
     if (telemetryInput) {
         config.telemetryUrl = telemetryInput.value.trim();
@@ -129,12 +119,8 @@ function saveConfig() {
         clearInterval(updateTimer);
     }
     
-    if (config.apiToken && config.vehicleId) {
-        if (isTokenExpired()) {
-            refreshAccessToken();
-        } else {
-            startUpdates();
-        }
+    if (config.telemetryUrl && config.vin) {
+        startUpdates();
     }
     
     toggleConfig();
@@ -927,6 +913,57 @@ async function fetchVehicleDataFromTelemetry() {
     }
     
     return null;
+}
+
+// 获取车辆数据 - 完全使用 Fleet Telemetry
+async function fetchVehicleData() {
+    try {
+        // 检查 Telemetry 配置
+        if (!config.telemetryUrl || !config.vin) {
+            updateConnectionStatus('error', '请配置 Fleet Telemetry 服务器 URL 和车辆 VIN');
+            return;
+        }
+        
+        updateConnectionStatus('connecting', '连接中...');
+        
+        // 从 Telemetry 服务器获取所有数据
+        const telemetryData = await fetchVehicleDataFromTelemetry();
+        
+        if (telemetryData) {
+            // 更新速度
+            if (telemetryData.speed !== null && telemetryData.speed !== undefined) {
+                updateSpeed(telemetryData.speed);
+            }
+            
+            // 更新里程
+            if (telemetryData.odometer !== null && telemetryData.odometer !== undefined) {
+                const odometerElement = document.getElementById('odometerValue');
+                if (odometerElement) {
+                    odometerElement.textContent = telemetryData.odometer.toFixed(1) + ' km';
+                }
+            }
+            
+            // 更新电池
+            if (telemetryData.batteryLevel !== null && telemetryData.batteryLevel !== undefined) {
+                const batteryElement = document.getElementById('batteryValue');
+                if (batteryElement) {
+                    batteryElement.textContent = Math.round(telemetryData.batteryLevel);
+                }
+            }
+            
+            updateConnectionStatus('connected', '已连接 (Telemetry)');
+            updateLastUpdateTime();
+            if (updateTimer) {
+                updateControlButtons(true);
+            }
+        } else {
+            updateConnectionStatus('error', '无法从 Telemetry 服务器获取数据。请检查服务器 URL 和 VIN 是否正确。');
+        }
+        
+    } catch (error) {
+        console.error('获取车辆数据失败:', error);
+        updateConnectionStatus('error', `错误: ${error.message}`);
+    }
 }
 
 // 获取车辆数据
