@@ -496,10 +496,9 @@ function startUpdates() {
         }
     }
     
-    // 重置失败计数
-    if (!window.telemetryFailCount) {
-        window.telemetryFailCount = 0;
-    }
+    // 重置失败计数（手动启动时重置）
+    window.telemetryFailCount = 0;
+    console.log('🔄 重置失败计数，开始新的更新周期');
     
     // 计算实际更新间隔（考虑失败次数）
     function getActualInterval() {
@@ -1401,6 +1400,12 @@ async function fetchSpeedFromTelemetry() {
 
 // 获取车辆数据 - 优先使用 Fleet Telemetry
 async function fetchVehicleData() {
+    // 如果 Telemetry 持续失败超过 10 次，完全停止请求
+    if (window.telemetryFailCount && window.telemetryFailCount > 10) {
+        // 已经停止，不再请求
+        return;
+    }
+    
     // 防止并发请求
     if (isFetching) {
         console.log('⏸️ 已有请求在进行中，跳过本次请求');
@@ -1487,19 +1492,33 @@ async function fetchVehicleData() {
             }
             window.telemetryFailCount++;
             
-            // 如果连续失败多次，增加请求间隔
-            if (window.telemetryFailCount > 5) {
-                console.log('Telemetry 服务器持续返回 404，减少请求频率...');
-                // 暂时停止 Telemetry 请求，只使用 Fleet API
+            // 如果连续失败超过 10 次，完全停止 Telemetry 请求，避免无意义的请求
+            if (window.telemetryFailCount > 10) {
+                console.log('⚠️ Telemetry 服务器持续返回 404（失败 ' + window.telemetryFailCount + ' 次），已停止自动请求。请检查配置或等待车辆开始发送数据。');
+                // 停止更新，避免继续无意义的请求
                 if (updateTimer) {
-                    // 不停止定时器，但跳过 Telemetry 请求
+                    stopUpdates();
+                    updateConnectionStatus('error', '⚠️ Telemetry 服务器持续失败（' + window.telemetryFailCount + ' 次），已停止自动更新\n\n请检查：\n1. 车辆是否已配置发送数据到服务器\n2. Railway 服务器是否正常运行\n3. 点击"开始读取"手动重试');
                 }
+                return;
             }
             
-            // 给出友好的提示（只在第一次或每 10 次失败时显示）
-            if (window.telemetryFailCount === 1 || window.telemetryFailCount % 10 === 0) {
-                updateConnectionStatus('error', '⚠️ 服务器没有找到车辆数据\n\n可能原因：\n1. 车辆还没有配置发送数据到服务器\n2. 车辆还没有开始发送数据\n\n解决方案：\n1. 点击"⚙️ 配置车辆 Fleet Telemetry"来配置车辆\n2. 或等待车辆开始发送数据\n3. 如果已配置，请检查 Railway 服务器日志');
+            // 如果连续失败多次，增加请求间隔（但不超过 10 次）
+            if (window.telemetryFailCount > 5) {
+                console.log(`⚠️ Telemetry 服务器持续返回 404（失败 ${window.telemetryFailCount} 次），减少请求频率...`);
             }
+            
+            // 给出友好的提示（只在第一次或每 5 次失败时显示）
+            if (window.telemetryFailCount === 1 || window.telemetryFailCount % 5 === 0) {
+                updateConnectionStatus('error', `⚠️ 服务器没有找到车辆数据（失败 ${window.telemetryFailCount} 次）\n\n可能原因：\n1. 车辆还没有配置发送数据到服务器\n2. 车辆还没有开始发送数据\n\n解决方案：\n1. 点击"⚙️ 配置车辆 Fleet Telemetry"来配置车辆\n2. 或等待车辆开始发送数据\n3. 如果已配置，请检查 Railway 服务器日志`);
+            }
+            
+            // 如果只配置了 Telemetry，没有配置 Fleet API，直接返回，不继续尝试
+            if (!config.apiToken || !config.vehicleId) {
+                console.warn('从 Telemetry 服务器获取数据失败，且未配置 Fleet API，停止请求');
+                return;
+            }
+            
             console.warn('从 Telemetry 服务器获取数据失败，尝试使用 Fleet API...');
         }
         }
