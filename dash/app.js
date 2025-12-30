@@ -78,13 +78,24 @@ function loadConfig() {
         const saved = JSON.parse(savedConfig);
         config = { ...config, ...saved };
         
-        // 填充表单
-        document.getElementById('clientId').value = config.clientId || '';
-        document.getElementById('clientSecret').value = config.clientSecret || '';
-        document.getElementById('redirectUri').value = config.redirectUri || window.location.origin + window.location.pathname;
-        document.getElementById('apiToken').value = config.apiToken || '';
-        document.getElementById('vehicleId').value = config.vehicleId || '';
-        document.getElementById('updateInterval').value = config.updateInterval || 2;
+        // 填充表单（安全地访问可能不存在的元素）
+        const clientIdInput = document.getElementById('clientId');
+        if (clientIdInput) clientIdInput.value = config.clientId || '';
+        
+        const clientSecretInput = document.getElementById('clientSecret');
+        if (clientSecretInput) clientSecretInput.value = config.clientSecret || '';
+        
+        const redirectUriInput = document.getElementById('redirectUri');
+        if (redirectUriInput) redirectUriInput.value = config.redirectUri || window.location.origin + window.location.pathname;
+        
+        const apiTokenInput = document.getElementById('apiToken');
+        if (apiTokenInput) apiTokenInput.value = config.apiToken || '';
+        
+        const vehicleIdInput = document.getElementById('vehicleId');
+        if (vehicleIdInput) vehicleIdInput.value = config.vehicleId || '';
+        
+        const updateIntervalInput = document.getElementById('updateInterval');
+        if (updateIntervalInput) updateIntervalInput.value = config.updateInterval || 2;
         const proxyInput = document.getElementById('proxyUrl');
         if (proxyInput) {
             proxyInput.value = config.proxyUrl || '';
