@@ -337,12 +337,20 @@ async function configureFleetTelemetry() {
         }
         
         // 如果 command 端点失败，尝试旧端点
+        let usedFallback = false;
         if (shouldFallback) {
+            usedFallback = true;
             console.log('尝试使用旧端点 /fleet_telemetry_config...');
             url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
             apiUrl = config.proxyUrl 
                 ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
                 : url;
+            
+            console.log('旧端点 URL:', apiUrl);
+            console.log('请求参数:', {
+                websocket_url: config.websocketUrl,
+                fields: [4, 5, 42]
+            });
             
             response = await fetch(apiUrl, {
                 method: 'POST',
@@ -355,6 +363,8 @@ async function configureFleetTelemetry() {
                     fields: [4, 5, 42] // VehicleSpeed, Odometer, BatteryLevel
                 })
             });
+            
+            console.log('旧端点响应状态:', response.status);
         }
         
         if (!response.ok) {
@@ -378,12 +388,26 @@ async function configureFleetTelemetry() {
             
             // 根据状态码提供更友好的错误信息
             let errorMessage = `配置失败: ${response.status}`;
+            if (usedFallback) {
+                errorMessage += '\n\n（已尝试回退到旧端点 /fleet_telemetry_config，但仍然失败）';
+            }
+            
             if (response.status === 500) {
                 errorMessage += '\n\n服务器内部错误。可能原因：\n1. 代理服务器配置问题\n2. Tesla API 暂时不可用\n3. 请求格式不正确\n4. 新应用需要使用 vehicle-command proxy（需要私钥签名）\n\n建议：\n1. 检查代理服务器是否正常运行\n2. 查看完整错误信息（下方）\n3. 如果是新应用，可能需要部署 vehicle-command proxy 服务器\n4. 查看 Tesla 开发者文档了解最新要求';
             } else if (response.status === 401) {
                 errorMessage += '\n\n认证失败。Token 可能已过期，请重新登录。';
             } else if (response.status === 400) {
-                errorMessage += '\n\n请求参数错误。请检查 WebSocket URL 格式是否正确。';
+                errorMessage += '\n\n请求参数错误。';
+                if (errorData.error && errorData.error.includes('invalid_command')) {
+                    errorMessage += '\n\n⚠️ 检测到 invalid_command 错误。';
+                    if (usedFallback) {
+                        errorMessage += '\n\n两个端点都返回了 invalid_command 错误，这可能意味着：\n1. 你的应用是 2024 年之后创建的新应用\n2. 需要使用 vehicle-command proxy（需要私钥签名）\n3. 或者你的应用类型不支持 Fleet Telemetry 配置\n\n解决方案：\n1. 检查你的 Tesla 开发者应用创建时间\n2. 如果是新应用，需要部署 vehicle-command proxy 服务器\n3. 或者使用 Tesla 官方应用来配置 Fleet Telemetry';
+                    } else {
+                        errorMessage += '\n\n这通常意味着需要使用旧端点或 vehicle-command proxy。';
+                    }
+                } else {
+                    errorMessage += '\n请检查：\n1. WebSocket URL 格式是否正确（应该是 wss://域名/telemetry）\n2. Vehicle ID 是否正确\n3. Token 是否有效';
+                }
             } else if (response.status === 404) {
                 errorMessage += '\n\n端点不存在。可能是：\n1. Vehicle ID 不正确\n2. 应用类型不支持此端点\n3. 需要使用 vehicle-command proxy';
             }
