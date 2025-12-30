@@ -958,11 +958,19 @@ async function handleOAuthCallback() {
         
         // 保存 client secret（如果还没有）
         if (!config.clientSecret) {
-            config.clientSecret = document.getElementById('clientSecret').value.trim();
+            const clientSecretInput = document.getElementById('clientSecret');
+            if (clientSecretInput) {
+                config.clientSecret = clientSecretInput.value.trim();
+            }
         }
         
         localStorage.setItem('teslaDashConfig', JSON.stringify(config));
-        document.getElementById('apiToken').value = config.apiToken;
+        
+        // 安全地更新 apiToken 输入框（如果存在）
+        const apiTokenInput = document.getElementById('apiToken');
+        if (apiTokenInput) {
+            apiTokenInput.value = config.apiToken;
+        }
         
         updateOAuthStatus('success', '登录成功！正在获取车辆列表...');
         
@@ -1128,7 +1136,8 @@ async function fetchVehicles() {
             // 如果只有一辆车，自动选择
             if (data.response.length === 1) {
                 config.vehicleId = data.response[0].id;
-                document.getElementById('vehicleId').value = config.vehicleId;
+                const vehicleIdInput = document.getElementById('vehicleId');
+                if (vehicleIdInput) vehicleIdInput.value = config.vehicleId;
                 localStorage.setItem('teslaDashConfig', JSON.stringify(config));
                 updateOAuthStatus('success', `已选择车辆: ${data.response[0].display_name || data.response[0].id}`);
                 startUpdates();
@@ -1142,7 +1151,8 @@ async function fetchVehicles() {
                     const vehicle = data.response.find(v => v.id.toString() === selected || v.id === selected);
                     if (vehicle) {
                         config.vehicleId = vehicle.id;
-                        document.getElementById('vehicleId').value = config.vehicleId;
+                        const vehicleIdInput = document.getElementById('vehicleId');
+                        if (vehicleIdInput) vehicleIdInput.value = config.vehicleId;
                         localStorage.setItem('teslaDashConfig', JSON.stringify(config));
                         updateOAuthStatus('success', `已选择车辆: ${vehicle.display_name || vehicle.id}`);
                         startUpdates();
