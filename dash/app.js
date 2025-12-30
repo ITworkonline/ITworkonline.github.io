@@ -63,26 +63,13 @@ document.addEventListener('DOMContentLoaded', function() {
         handleOAuthCallback();
     }, 100);
     
-    // 如果有 token，开始更新（但不在 OAuth 回调时）
+    // 如果配置了 Telemetry，自动开始更新
     const urlParams = new URLSearchParams(window.location.search);
     if (!urlParams.get('code') && !urlParams.get('error')) {
-        if (config.apiToken && config.vehicleId) {
-            // 检查 token 是否过期
-            if (isTokenExpired()) {
-                refreshAccessToken();
-            } else {
-                startUpdates();
-            }
-        }
-    }
-    
-    // 监听配置变化
-    document.getElementById('updateInterval').addEventListener('change', function() {
-        if (updateTimer) {
-            clearInterval(updateTimer);
+        if (config.telemetryUrl && config.vin) {
             startUpdates();
         }
-    });
+    }
 });
 
 // 加载配置
@@ -912,8 +899,8 @@ function generateRandomString(length) {
     return result;
 }
 
-// 从 Fleet Telemetry 服务器获取速度数据
-async function fetchSpeedFromTelemetry() {
+// 从 Fleet Telemetry 服务器获取所有车辆数据
+async function fetchVehicleDataFromTelemetry() {
     if (!config.telemetryUrl || !config.vin) {
         return null;
     }
@@ -929,15 +916,14 @@ async function fetchSpeedFromTelemetry() {
         
         if (response.ok) {
             const data = await response.json();
-            if (data.speed !== null && data.speed !== undefined) {
-                console.log('✅ 从 Fleet Telemetry 获取速度:', data.speed, 'km/h');
-                return data.speed;
-            }
+            console.log('✅ 从 Fleet Telemetry 获取数据:', data);
+            return data;
         } else {
-            console.warn('Telemetry 服务器响应错误:', response.status);
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.warn('Telemetry 服务器响应错误:', response.status, errorData);
         }
     } catch (error) {
-        console.warn('从 Telemetry 服务器获取速度失败:', error);
+        console.warn('从 Telemetry 服务器获取数据失败:', error);
     }
     
     return null;

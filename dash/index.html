@@ -92,53 +92,18 @@
 
             <div class="config-divider"></div>
 
-            <!-- 手动配置部分（备用） -->
+            <!-- Fleet Telemetry 配置 -->
             <div class="config-section">
-                <h4>手动配置（可选）</h4>
+                <h4>Fleet Telemetry 配置（必需）</h4>
                 <div class="config-item">
-                    <label for="apiToken">Access Token:</label>
-                    <input type="password" id="apiToken" placeholder="已有 Token 可直接输入">
+                    <label for="telemetryUrl">Telemetry 服务器 URL:</label>
+                    <input type="text" id="telemetryUrl" placeholder="例如: https://your-telemetry.railway.app" required>
+                    <small class="config-hint">部署在 Railway/Render 等平台的 Telemetry 服务器 URL</small>
                 </div>
                 <div class="config-item">
-                    <label for="vehicleId">Vehicle ID:</label>
-                    <input type="text" id="vehicleId" placeholder="输入车辆 ID">
-                    <button class="btn-fetch-vehicles" onclick="fetchVehicles()" style="margin-top: 8px; width: 100%;">获取车辆列表</button>
-                </div>
-            </div>
-
-            <div class="config-divider"></div>
-
-            <!-- 其他设置 -->
-            <div class="config-section">
-                <h4>其他设置</h4>
-                <div class="config-item">
-                    <label for="updateInterval">更新间隔 (秒):</label>
-                    <input type="number" id="updateInterval" value="2" min="1" max="10">
-                </div>
-                <div class="config-item">
-                    <label for="proxyUrl">CORS 代理 URL (可选):</label>
-                    <input type="text" id="proxyUrl" placeholder="例如: https://your-proxy.com/api/proxy">
-                    <small class="config-hint">由于 Tesla API 的 CORS 限制，需要代理服务器。留空则尝试直接调用（可能失败）</small>
-                </div>
-                <div class="config-item">
-                    <label for="telemetryUrl">Fleet Telemetry 服务器 URL (可选):</label>
-                    <input type="text" id="telemetryUrl" placeholder="例如: https://your-telemetry.railway.app">
-                    <small class="config-hint">如果配置了 Telemetry 服务器，将优先使用实时速度数据（每 500ms 更新）</small>
-                </div>
-                <div class="config-item">
-                    <label for="vin">车辆 VIN (用于 Telemetry):</label>
-                    <input type="text" id="vin" placeholder="5YJ3E1EA1KF123456">
-                    <small class="config-hint">车辆识别码，用于匹配 Telemetry 数据。可在车辆信息中找到</small>
-                    <button class="btn-login" onclick="setupTelemetry()" style="margin-top: 10px; width: 100%;">
-                        ⚙️ 配置 Fleet Telemetry
-                    </button>
-                    <button class="btn-fetch-vehicles" onclick="checkTelemetryStatus()" style="margin-top: 8px; width: 100%;">
-                        📊 检查 Telemetry 状态
-                    </button>
-                    <small class="config-hint" style="color: #888; font-size: 11px; margin-top: 5px; display: block;">
-                        点击"配置"按钮通过 API 配置车辆发送 Telemetry 数据到服务器<br>
-                        点击"检查状态"查看配置是否已同步（synced: true）
-                    </small>
+                    <label for="vin">车辆 VIN:</label>
+                    <input type="text" id="vin" placeholder="5YJ3E1EA1KF123456" required>
+                    <small class="config-hint">车辆识别码，可在 Tesla 应用中查看，或查看前挡风玻璃左下角</small>
                 </div>
             </div>
 
