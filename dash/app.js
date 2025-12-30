@@ -1052,16 +1052,12 @@ async function fetchSpeedFromTelemetry() {
         
         if (response.ok) {
             const data = await response.json();
-            // 返回速度（如果数据中有 VehicleSpeed，需要转换为 km/h）
+            // 服务器返回的 speed 已经是 km/h（服务器已转换）
+            // 如果 speed 不存在，尝试使用 speedMph 并转换
             if (data.speed !== null && data.speed !== undefined) {
-                // 如果速度单位是 mph，转换为 km/h
-                if (data.speed < 150) {
-                    return data.speed * 1.60934;
-                }
-                return data.speed;
-            } else if (data.VehicleSpeed !== null && data.VehicleSpeed !== undefined) {
-                // Fleet Telemetry 使用 VehicleSpeed（单位：mph）
-                return data.VehicleSpeed * 1.60934; // 转换为 km/h
+                return data.speed; // 已经是 km/h
+            } else if (data.speedMph !== null && data.speedMph !== undefined) {
+                return data.speedMph * 1.60934; // 转换为 km/h
             }
         }
     } catch (error) {
@@ -1082,17 +1078,16 @@ async function fetchVehicleData() {
             const telemetryData = await fetchVehicleDataFromTelemetry();
             
             if (telemetryData) {
-                // 更新速度（支持多种字段名）
+                // 更新速度
+                // 服务器返回的 speed 已经是 km/h（服务器已转换）
+                // 如果 speed 不存在，尝试使用 speedMph 并转换
                 let speed = null;
                 if (telemetryData.speed !== null && telemetryData.speed !== undefined) {
+                    // 服务器已经转换为 km/h，直接使用
                     speed = telemetryData.speed;
-                    // 如果速度值较小（可能是 mph），转换为 km/h
-                    if (speed < 150 && speed > 0) {
-                        speed = speed * 1.60934;
-                    }
-                } else if (telemetryData.VehicleSpeed !== null && telemetryData.VehicleSpeed !== undefined) {
-                    // Fleet Telemetry 使用 VehicleSpeed（单位：mph）
-                    speed = telemetryData.VehicleSpeed * 1.60934; // 转换为 km/h
+                } else if (telemetryData.speedMph !== null && telemetryData.speedMph !== undefined) {
+                    // 如果只有 speedMph，转换为 km/h
+                    speed = telemetryData.speedMph * 1.60934;
                 }
                 
                 if (speed !== null) {
