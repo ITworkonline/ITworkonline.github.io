@@ -314,9 +314,31 @@ async function configureFleetTelemetry() {
             })
         });
         
-        // 如果 command 端点失败（404 或 405），尝试旧端点
+        // 检查是否需要回退到旧端点
+        let shouldFallback = false;
         if (response.status === 404 || response.status === 405) {
-            console.log('command 端点不可用，尝试使用旧端点...');
+            shouldFallback = true;
+            console.log('command 端点返回 ' + response.status + '，回退到旧端点...');
+        } else if (response.status === 400) {
+            // 检查错误信息是否包含 invalid_command
+            try {
+                // 克隆 response 以便可以多次读取
+                const responseClone = response.clone();
+                const errorText = await responseClone.text();
+                const errorData = JSON.parse(errorText);
+                if (errorData.error && errorData.error.includes('invalid_command')) {
+                    shouldFallback = true;
+                    console.log('检测到 invalid_command 错误，回退到旧端点...');
+                }
+            } catch (e) {
+                // 如果解析失败，继续使用原 response
+                console.warn('无法解析错误响应:', e);
+            }
+        }
+        
+        // 如果 command 端点失败，尝试旧端点
+        if (shouldFallback) {
+            console.log('尝试使用旧端点 /fleet_telemetry_config...');
             url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
             apiUrl = config.proxyUrl 
                 ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
@@ -1595,6 +1617,13 @@ async function fetchVehicleData() {
                 errorJson = JSON.parse(errorData);
             } catch (e) {
                 errorJson = { error: errorData };
+            }
+            
+            // 如果是 404 错误，提供更友好的提示
+            if (response.status === 404) {
+                console.error('API 错误: 404 - 车辆未找到');
+                console.error('错误详情:', errorJson);
+                throw new Error(`API 错误: 404 - 车辆未找到\n\n可能原因：\n1. Vehicle ID (${config.vehicleId}) 不正确\n2. 车辆不属于当前账户\n3. API 端点路径错误\n\n建议：\n1. 重新获取车辆列表\n2. 检查 Vehicle ID 是否正确\n3. 确认车辆是否属于当前登录的账户`);
             }
             
             // 如果是 412 错误（需要注册），尝试自动注册
