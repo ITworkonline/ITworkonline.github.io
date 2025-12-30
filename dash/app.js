@@ -260,12 +260,41 @@ async function configureFleetTelemetry() {
         
         if (!response.ok) {
             let errorData;
+            let errorText = '';
             try {
-                errorData = await response.json();
+                const text = await response.text();
+                errorText = text;
+                try {
+                    errorData = JSON.parse(text);
+                } catch (parseError) {
+                    // 如果不是 JSON，可能是 HTML 错误页面
+                    errorData = { 
+                        error: 'Proxy request failed',
+                        message: text.substring(0, 100) + '...' // 只显示前100个字符
+                    };
+                }
             } catch (e) {
-                errorData = { error: await response.text() };
+                errorData = { error: 'Unknown error', message: e.message };
             }
-            throw new Error(`配置失败: ${response.status} - ${JSON.stringify(errorData)}`);
+            
+            // 根据状态码提供更友好的错误信息
+            let errorMessage = `配置失败: ${response.status}`;
+            if (response.status === 500) {
+                errorMessage += '\n\n服务器内部错误。可能原因：\n1. 代理服务器配置问题\n2. Tesla API 暂时不可用\n3. 请求格式不正确\n\n建议：\n1. 检查代理服务器是否正常运行\n2. 稍后重试\n3. 查看服务器日志获取详细信息';
+            } else if (response.status === 401) {
+                errorMessage += '\n\n认证失败。Token 可能已过期，请重新登录。';
+            } else if (response.status === 400) {
+                errorMessage += '\n\n请求参数错误。请检查 WebSocket URL 格式是否正确。';
+            }
+            
+            if (errorData.error) {
+                errorMessage += `\n\n错误详情: ${errorData.error}`;
+            }
+            if (errorData.message) {
+                errorMessage += `\n${errorData.message}`;
+            }
+            
+            throw new Error(errorMessage);
         }
         
         const data = await response.json();
@@ -1102,6 +1131,12 @@ async function fetchVehicleDataFromTelemetry() {
             const data = await response.json();
             console.log('✅ 从 Fleet Telemetry 获取数据:', data);
             return data;
+        } else if (response.status === 404) {
+            // 404 表示服务器没有该车辆的数据
+            const errorData = await response.json().catch(() => ({ error: 'Vehicle not found' }));
+            console.warn('⚠️ Telemetry 服务器没有找到车辆数据:', errorData);
+            // 返回 null，让调用者知道需要配置车辆
+            return null;
         } else {
             const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
             console.warn('Telemetry 服务器响应错误:', response.status, errorData);
@@ -1212,7 +1247,9 @@ async function fetchVehicleData() {
                 }
                 return;
             } else {
-                // Telemetry 获取失败，但继续尝试 Fleet API（如果有配置）
+                // Telemetry 获取失败（可能是 404，车辆还没有配置）
+                // 给出友好的提示
+                updateConnectionStatus('error', '⚠️ 服务器没有找到车辆数据\n\n可能原因：\n1. 车辆还没有配置发送数据到服务器\n2. 车辆还没有开始发送数据\n\n解决方案：\n1. 点击"⚙️ 配置车辆 Fleet Telemetry"来配置车辆\n2. 或等待车辆开始发送数据');
                 console.warn('从 Telemetry 服务器获取数据失败，尝试使用 Fleet API...');
             }
         }
