@@ -937,7 +937,7 @@ async function fetchVehicleData() {
             
             // 更新里程
             if (telemetryData.odometer !== null && telemetryData.odometer !== undefined) {
-                const odometerElement = document.getElementById('odometerValue');
+                const odometerElement = document.getElementById('odometer');
                 if (odometerElement) {
                     odometerElement.textContent = telemetryData.odometer.toFixed(1) + ' km';
                 }
@@ -945,9 +945,9 @@ async function fetchVehicleData() {
             
             // 更新电池
             if (telemetryData.batteryLevel !== null && telemetryData.batteryLevel !== undefined) {
-                const batteryElement = document.getElementById('batteryValue');
+                const batteryElement = document.getElementById('batteryLevel');
                 if (batteryElement) {
-                    batteryElement.textContent = Math.round(telemetryData.batteryLevel);
+                    batteryElement.textContent = Math.round(telemetryData.batteryLevel) + '%';
                 }
             }
             
