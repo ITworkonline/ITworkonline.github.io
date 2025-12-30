@@ -105,6 +105,11 @@ function saveConfig() {
     const telemetryInput = document.getElementById('telemetryUrl');
     if (telemetryInput) {
         config.telemetryUrl = telemetryInput.value.trim();
+        // 自动添加 https:// 协议（如果没有）
+        if (config.telemetryUrl && !config.telemetryUrl.startsWith('http://') && !config.telemetryUrl.startsWith('https://')) {
+            config.telemetryUrl = 'https://' + config.telemetryUrl;
+            telemetryInput.value = config.telemetryUrl;
+        }
     }
     const vinInput = document.getElementById('vin');
     if (vinInput) {
@@ -119,10 +124,20 @@ function saveConfig() {
             config.websocketUrl = wsUrl;
             websocketInput.value = wsUrl;
         }
-        // 确保 WebSocket URL 有正确的协议前缀
+        // 确保 WebSocket URL 有正确的协议前缀和路径
         if (config.websocketUrl && !config.websocketUrl.startsWith('wss://') && !config.websocketUrl.startsWith('ws://')) {
             config.websocketUrl = 'wss://' + config.websocketUrl;
+            // 如果没有 /telemetry 路径，自动添加
+            if (!config.websocketUrl.endsWith('/telemetry')) {
+                config.websocketUrl = config.websocketUrl.replace(/\/$/, '') + '/telemetry';
+            }
             websocketInput.value = config.websocketUrl;
+        } else if (config.websocketUrl && (config.websocketUrl.startsWith('wss://') || config.websocketUrl.startsWith('ws://'))) {
+            // 如果有协议但没有路径，添加 /telemetry
+            if (!config.websocketUrl.endsWith('/telemetry') && !config.websocketUrl.match(/\/telemetry$/)) {
+                config.websocketUrl = config.websocketUrl.replace(/\/$/, '') + '/telemetry';
+                websocketInput.value = config.websocketUrl;
+            }
         }
     }
     
@@ -155,6 +170,11 @@ async function configureFleetTelemetry() {
             throw new Error('请先填写车辆 VIN');
         }
         
+        // 确保 telemetryUrl 有正确的协议
+        if (config.telemetryUrl && !config.telemetryUrl.startsWith('http://') && !config.telemetryUrl.startsWith('https://')) {
+            config.telemetryUrl = 'https://' + config.telemetryUrl;
+        }
+        
         if (!config.websocketUrl) {
             // 尝试从 telemetryUrl 生成
             if (config.telemetryUrl) {
@@ -164,14 +184,14 @@ async function configureFleetTelemetry() {
             }
         }
         
-        // 确保 WebSocket URL 有正确的协议前缀
+        // 确保 WebSocket URL 有正确的协议前缀和路径
         if (!config.websocketUrl.startsWith('wss://') && !config.websocketUrl.startsWith('ws://')) {
             // 如果没有协议，添加 wss://
-            if (config.websocketUrl.includes('railway.app') || config.websocketUrl.includes('render.com') || config.websocketUrl.includes('vercel.app')) {
-                config.websocketUrl = 'wss://' + config.websocketUrl;
-            } else {
-                config.websocketUrl = 'wss://' + config.websocketUrl;
-            }
+            config.websocketUrl = 'wss://' + config.websocketUrl;
+        }
+        // 确保有 /telemetry 路径
+        if (!config.websocketUrl.endsWith('/telemetry')) {
+            config.websocketUrl = config.websocketUrl.replace(/\/$/, '') + '/telemetry';
         }
         
         // 检查是否有 API Token（用于调用 Fleet API）
@@ -188,13 +208,15 @@ async function configureFleetTelemetry() {
             statusDiv.style.background = '#333';
             statusDiv.style.color = '#fff';
             try {
-                await refreshAccessToken();
+                // 传递 skipTimerCheck=true 以便在配置时也能刷新 token
+                await refreshAccessToken(true);
                 // 刷新后重新加载配置
                 const savedConfig = localStorage.getItem('teslaDashConfig');
                 if (savedConfig) {
                     const saved = JSON.parse(savedConfig);
                     config = { ...config, ...saved };
                 }
+                statusDiv.textContent = 'Token 刷新成功，继续配置...';
             } catch (refreshError) {
                 statusDiv.textContent = '❌ Token 刷新失败，请重新登录';
                 statusDiv.style.background = '#ff0000';
@@ -534,14 +556,17 @@ async function registerPartnerAccount() {
 }
 
 // 刷新 access token
-async function refreshAccessToken() {
-    // 如果定时器已停止，不刷新 token
-    if (!updateTimer) {
+async function refreshAccessToken(skipTimerCheck = false) {
+    // 如果定时器已停止且不是配置调用，不刷新 token
+    if (!skipTimerCheck && !updateTimer) {
         console.log('refreshAccessToken: 定时器已停止，取消 token 刷新');
         return;
     }
     
     if (!config.refreshToken || !config.clientId || !config.clientSecret) {
+        if (skipTimerCheck) {
+            throw new Error('缺少刷新 token 或 OAuth 配置，请重新登录');
+        }
         updateConnectionStatus('error', '缺少刷新 token 或 OAuth 配置');
         return;
     }
@@ -577,9 +602,15 @@ async function refreshAccessToken() {
         config.tokenExpiresAt = Date.now() + (data.expires_in * 1000);
         
         localStorage.setItem('teslaDashConfig', JSON.stringify(config));
-        document.getElementById('apiToken').value = config.apiToken;
+        const apiTokenInput = document.getElementById('apiToken');
+        if (apiTokenInput) {
+            apiTokenInput.value = config.apiToken;
+        }
         
-        startUpdates();
+        // 只有在有定时器时才启动更新（避免在配置时启动）
+        if (updateTimer) {
+            startUpdates();
+        }
     } catch (error) {
         console.error('刷新 token 失败:', error);
         updateConnectionStatus('error', 'Token 已过期，请重新登录');
