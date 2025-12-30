@@ -233,11 +233,20 @@ async function configureFleetTelemetry() {
     }
 }
 
-// 切换配置面板
+// 切换配置面板 - 确保全局可用
 function toggleConfig() {
     const panel = document.getElementById('configPanel');
-    panel.classList.toggle('show');
+    if (panel) {
+        panel.classList.toggle('show');
+    } else {
+        console.error('配置面板元素未找到');
+    }
 }
+
+// 确保函数在全局作用域中可用
+window.toggleConfig = toggleConfig;
+window.saveConfig = saveConfig;
+window.configureFleetTelemetry = configureFleetTelemetry;
 
 // 初始化速度表盘
 function initializeSpeedometer() {
