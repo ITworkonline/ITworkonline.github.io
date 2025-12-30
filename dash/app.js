@@ -19,6 +19,9 @@ let config = {
 };
 
 let updateTimer = null;
+let isFetching = false; // 防止并发请求
+let lastFetchTime = 0; // 上次请求时间
+const MIN_FETCH_INTERVAL = 2000; // 最小请求间隔（2秒）
 
 // 初始化
 document.addEventListener('DOMContentLoaded', function() {
@@ -62,11 +65,16 @@ document.addEventListener('DOMContentLoaded', function() {
         handleOAuthCallback();
     }, 100);
     
-    // 如果配置了 Telemetry，自动开始更新
+    // 如果配置了 Telemetry，自动开始更新（延迟启动，避免在页面加载时立即请求）
     const urlParams = new URLSearchParams(window.location.search);
     if (!urlParams.get('code') && !urlParams.get('error')) {
         if (config.telemetryUrl && config.vin) {
-            startUpdates();
+            // 延迟启动，避免在 OAuth 回调处理过程中启动
+            setTimeout(() => {
+                if (!updateTimer) {
+                    startUpdates();
+                }
+            }, 2000);
         }
     }
 });
@@ -170,8 +178,15 @@ function saveConfig() {
         clearInterval(updateTimer);
     }
     
-    if (config.telemetryUrl && config.vin) {
-        startUpdates();
+    // 只有在配置了 Telemetry 且不在 OAuth 回调过程中时才自动启动
+    const urlParams = new URLSearchParams(window.location.search);
+    const isOAuthCallback = urlParams.get('code') || urlParams.get('error');
+    
+    if (config.telemetryUrl && config.vin && !isOAuthCallback) {
+        // 延迟启动，避免在保存配置时立即启动
+        setTimeout(() => {
+            startUpdates();
+        }, 1000);
     }
     
     toggleConfig();
@@ -444,19 +459,29 @@ function initializeSpeedometer() {
 
 // 开始更新数据
 function startUpdates() {
-    if (!config.apiToken || !config.vehicleId) {
-        updateConnectionStatus('error', '请先配置 API Token 和 Vehicle ID');
+    // 如果已经有定时器在运行，不重复启动
+    if (updateTimer) {
+        console.log('定时器已在运行，跳过启动');
         return;
     }
     
-    // 如果已经有定时器在运行，先清除
-    if (updateTimer) {
-        clearInterval(updateTimer);
-        updateTimer = null;
+    // 如果使用 Telemetry，不需要 API Token 和 Vehicle ID
+    if (!config.telemetryUrl || !config.vin) {
+        if (!config.apiToken || !config.vehicleId) {
+            updateConnectionStatus('error', '请先配置 API Token 和 Vehicle ID，或配置 Telemetry 服务器 URL 和 VIN');
+            return;
+        }
     }
     
-    // 立即执行一次
-    fetchVehicleData();
+    // 确保更新间隔至少为 2 秒
+    const updateInterval = Math.max((config.updateInterval || 2) * 1000, MIN_FETCH_INTERVAL);
+    
+    // 立即执行一次（延迟一下，避免在页面加载时立即请求）
+    setTimeout(() => {
+        if (updateTimer) {
+            fetchVehicleData();
+        }
+    }, 500);
     
     // 设置定时更新
     updateTimer = setInterval(() => {
@@ -464,7 +489,9 @@ function startUpdates() {
         if (updateTimer) {
             fetchVehicleData();
         }
-    }, config.updateInterval * 1000);
+    }, updateInterval);
+    
+    console.log('✅ 开始更新数据，间隔:', updateInterval / 1000, '秒');
     
     // 更新按钮状态
     updateControlButtons(true);
@@ -1289,6 +1316,22 @@ async function fetchSpeedFromTelemetry() {
 
 // 获取车辆数据 - 优先使用 Fleet Telemetry
 async function fetchVehicleData() {
+    // 防止并发请求
+    if (isFetching) {
+        console.log('⏸️ 已有请求在进行中，跳过本次请求');
+        return;
+    }
+    
+    // 检查请求间隔（防止请求过于频繁）
+    const now = Date.now();
+    if (now - lastFetchTime < MIN_FETCH_INTERVAL) {
+        console.log('⏸️ 请求间隔太短，跳过本次请求');
+        return;
+    }
+    
+    isFetching = true;
+    lastFetchTime = now;
+    
     try {
         // 优先使用 Fleet Telemetry（如果已配置）
         if (config.telemetryUrl && config.vin) {
@@ -1572,6 +1615,9 @@ async function fetchVehicleData() {
     } catch (error) {
         console.error('获取车辆数据失败:', error);
         updateConnectionStatus('error', `错误: ${error.message}`);
+    } finally {
+        // 释放请求锁
+        isFetching = false;
     }
 }
 
