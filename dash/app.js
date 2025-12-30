@@ -201,7 +201,12 @@ async function configureFleetTelemetry() {
         });
         
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: await response.text() }));
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                errorData = { error: await response.text() };
+            }
             throw new Error(`配置失败: ${response.status} - ${JSON.stringify(errorData)}`);
         }
         
@@ -1030,82 +1035,95 @@ async function fetchVehicleDataFromTelemetry() {
     return null;
 }
 
-// 获取车辆数据 - 完全使用 Fleet Telemetry
-async function fetchVehicleData() {
-    try {
-        // 检查 Telemetry 配置
-        if (!config.telemetryUrl || !config.vin) {
-            updateConnectionStatus('error', '请配置 Fleet Telemetry 服务器 URL 和车辆 VIN');
-            return;
-        }
-        
-        updateConnectionStatus('connecting', '连接中...');
-        
-        // 从 Telemetry 服务器获取所有数据
-        const telemetryData = await fetchVehicleDataFromTelemetry();
-        
-        if (telemetryData) {
-            // 更新速度
-            if (telemetryData.speed !== null && telemetryData.speed !== undefined) {
-                updateSpeed(telemetryData.speed);
-            }
-            
-            // 更新里程
-            if (telemetryData.odometer !== null && telemetryData.odometer !== undefined) {
-                const odometerElement = document.getElementById('odometer');
-                if (odometerElement) {
-                    odometerElement.textContent = telemetryData.odometer.toFixed(1) + ' km';
-                }
-            }
-            
-            // 更新电池
-            if (telemetryData.batteryLevel !== null && telemetryData.batteryLevel !== undefined) {
-                const batteryElement = document.getElementById('batteryLevel');
-                if (batteryElement) {
-                    batteryElement.textContent = Math.round(telemetryData.batteryLevel) + '%';
-                }
-            }
-            
-            updateConnectionStatus('connected', '已连接 (Telemetry)');
-            updateLastUpdateTime();
-            if (updateTimer) {
-                updateControlButtons(true);
-            }
-        } else {
-            updateConnectionStatus('error', '无法从 Telemetry 服务器获取数据。请检查服务器 URL 和 VIN 是否正确。');
-        }
-        
-    } catch (error) {
-        console.error('获取车辆数据失败:', error);
-        updateConnectionStatus('error', `错误: ${error.message}`);
+// 从 Fleet Telemetry 服务器获取速度（单独函数，用于快速更新）
+async function fetchSpeedFromTelemetry() {
+    if (!config.telemetryUrl || !config.vin) {
+        return null;
     }
+    
+    try {
+        const url = `${config.telemetryUrl}/api/vehicle/${config.vin}`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            // 返回速度（如果数据中有 VehicleSpeed，需要转换为 km/h）
+            if (data.speed !== null && data.speed !== undefined) {
+                // 如果速度单位是 mph，转换为 km/h
+                if (data.speed < 150) {
+                    return data.speed * 1.60934;
+                }
+                return data.speed;
+            } else if (data.VehicleSpeed !== null && data.VehicleSpeed !== undefined) {
+                // Fleet Telemetry 使用 VehicleSpeed（单位：mph）
+                return data.VehicleSpeed * 1.60934; // 转换为 km/h
+            }
+        }
+    } catch (error) {
+        console.warn('从 Telemetry 服务器获取速度失败:', error);
+    }
+    
+    return null;
 }
 
-// 获取车辆数据
+// 获取车辆数据 - 优先使用 Fleet Telemetry
 async function fetchVehicleData() {
     try {
-        // 如果配置了 Telemetry 服务器，优先从 Telemetry 获取速度
+        // 优先使用 Fleet Telemetry（如果已配置）
         if (config.telemetryUrl && config.vin) {
-            const telemetrySpeed = await fetchSpeedFromTelemetry();
-            if (telemetrySpeed !== null) {
-                // 使用 Telemetry 速度数据
-                updateSpeed(telemetrySpeed);
-                
-                // 仍然从 Fleet API 获取其他数据（电池、里程等）
-                // 但只在需要时调用（避免频繁请求）
-                if (updateTimer) {
-                    // 每 5 次 Telemetry 更新后，更新一次其他数据
-                    if (!window.telemetryUpdateCount) {
-                        window.telemetryUpdateCount = 0;
+            updateConnectionStatus('connecting', '连接中...');
+            
+            // 从 Telemetry 服务器获取所有数据
+            const telemetryData = await fetchVehicleDataFromTelemetry();
+            
+            if (telemetryData) {
+                // 更新速度（支持多种字段名）
+                let speed = null;
+                if (telemetryData.speed !== null && telemetryData.speed !== undefined) {
+                    speed = telemetryData.speed;
+                    // 如果速度值较小（可能是 mph），转换为 km/h
+                    if (speed < 150 && speed > 0) {
+                        speed = speed * 1.60934;
                     }
-                    window.telemetryUpdateCount++;
-                    
-                    if (window.telemetryUpdateCount >= 5) {
-                        window.telemetryUpdateCount = 0;
-                        // 异步获取其他数据，不阻塞速度更新
-                        fetchOtherVehicleData().catch(err => {
-                            console.warn('获取其他车辆数据失败:', err);
-                        });
+                } else if (telemetryData.VehicleSpeed !== null && telemetryData.VehicleSpeed !== undefined) {
+                    // Fleet Telemetry 使用 VehicleSpeed（单位：mph）
+                    speed = telemetryData.VehicleSpeed * 1.60934; // 转换为 km/h
+                }
+                
+                if (speed !== null) {
+                    updateSpeed(speed);
+                }
+                
+                // 更新里程
+                if (telemetryData.odometer !== null && telemetryData.odometer !== undefined) {
+                    const odometerElement = document.getElementById('odometer');
+                    if (odometerElement) {
+                        odometerElement.textContent = telemetryData.odometer.toFixed(1) + ' km';
+                    }
+                }
+                
+                // 更新电池
+                if (telemetryData.batteryLevel !== null && telemetryData.batteryLevel !== undefined) {
+                    const batteryElement = document.getElementById('batteryLevel');
+                    if (batteryElement) {
+                        batteryElement.textContent = Math.round(telemetryData.batteryLevel) + '%';
+                    }
+                }
+                
+                // 更新充电状态（如果有）
+                if (telemetryData.chargingState !== null && telemetryData.chargingState !== undefined) {
+                    const chargingElement = document.getElementById('chargingState');
+                    if (chargingElement) {
+                        const state = telemetryData.chargingState;
+                        chargingElement.textContent = 
+                            state === 'Charging' ? '充电中' : 
+                            state === 'Disconnected' ? '未连接' : 
+                            state === 'Complete' ? '已完成' : '待机';
                     }
                 }
                 
@@ -1115,10 +1133,18 @@ async function fetchVehicleData() {
                     updateControlButtons(true);
                 }
                 return;
+            } else {
+                // Telemetry 获取失败，但继续尝试 Fleet API（如果有配置）
+                console.warn('从 Telemetry 服务器获取数据失败，尝试使用 Fleet API...');
             }
         }
         
-        // 如果没有 Telemetry 或获取失败，使用原来的 Fleet API 方法
+        // 如果没有配置 Telemetry 或获取失败，使用 Fleet API（需要 API Token 和 Vehicle ID）
+        if (!config.apiToken || !config.vehicleId) {
+            updateConnectionStatus('error', '请配置 Fleet Telemetry 服务器 URL 和 VIN，或配置 OAuth Token 和 Vehicle ID');
+            return;
+        }
+        
         // 检查 token 是否过期
         if (isTokenExpired()) {
             await refreshAccessToken();
