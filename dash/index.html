@@ -122,6 +122,11 @@
                     <input type="text" id="websocketUrl" placeholder="例如: wss://your-telemetry.railway.app/telemetry">
                     <small class="config-hint">用于配置车辆的 WebSocket URL（wss://），通常与服务器 URL 相同但使用 wss:// 协议</small>
                 </div>
+                <div class="config-item">
+                    <label for="vehicleCommandProxyUrl">Vehicle-Command Proxy URL（必需）:</label>
+                    <input type="text" id="vehicleCommandProxyUrl" placeholder="例如: https://your-proxy.example.com">
+                    <small class="config-hint" style="color: #ffaa00;">⚠️ 配置 Fleet Telemetry 必须通过 vehicle-command proxy。参考 <a href="https://github.com/teslamotors/vehicle-command" target="_blank" style="color: #4a9eff;">vehicle-command</a> 部署说明</small>
+                </div>
                 <button class="btn-config-telemetry" onclick="configureFleetTelemetry()" style="margin-top: 10px; width: 100%; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; border-radius: 8px; color: white; font-size: 14px; cursor: pointer;">
                     ⚙️ 配置车辆 Fleet Telemetry
                 </button>

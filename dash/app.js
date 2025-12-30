@@ -15,7 +15,8 @@ let config = {
     vehicleId: '',
     vin: '', // 车辆 VIN（用于 Fleet Telemetry）
     telemetryUrl: '', // Fleet Telemetry 服务器 URL（HTTP）
-    websocketUrl: '' // Fleet Telemetry WebSocket URL（wss://，用于配置车辆）
+    websocketUrl: '', // Fleet Telemetry WebSocket URL（wss://，用于配置车辆）
+    vehicleCommandProxyUrl: '' // vehicle-command HTTP proxy URL（用于配置 Fleet Telemetry，必需）
 };
 
 let updateTimer = null;
@@ -116,6 +117,10 @@ function loadConfig() {
         if (vinInput) {
             vinInput.value = config.vin || '';
         }
+        const vehicleCommandProxyInput = document.getElementById('vehicleCommandProxyUrl');
+        if (vehicleCommandProxyInput) {
+            vehicleCommandProxyInput.value = config.vehicleCommandProxyUrl || '';
+        }
     }
 }
 
@@ -168,6 +173,17 @@ function saveConfig() {
                 config.websocketUrl = config.websocketUrl.replace(/\/$/, '') + '/telemetry';
                 websocketInput.value = config.websocketUrl;
             }
+        }
+    }
+    
+    // 保存 vehicle-command proxy URL
+    const vehicleCommandProxyInput = document.getElementById('vehicleCommandProxyUrl');
+    if (vehicleCommandProxyInput) {
+        config.vehicleCommandProxyUrl = vehicleCommandProxyInput.value.trim();
+        // 自动添加 https:// 协议（如果没有）
+        if (config.vehicleCommandProxyUrl && !config.vehicleCommandProxyUrl.startsWith('http://') && !config.vehicleCommandProxyUrl.startsWith('https://')) {
+            config.vehicleCommandProxyUrl = 'https://' + config.vehicleCommandProxyUrl;
+            vehicleCommandProxyInput.value = config.vehicleCommandProxyUrl;
         }
     }
     
@@ -248,6 +264,14 @@ async function configureFleetTelemetry() {
             config.websocketUrl = config.websocketUrl.replace(/\/$/, '') + '/telemetry';
         }
         
+        // 检查是否有 vehicle-command proxy URL（必需）
+        if (!config.vehicleCommandProxyUrl) {
+            statusDiv.textContent = '⚠️ 需要配置 Vehicle-Command Proxy URL\n\n根据 Tesla 官方文档，配置 Fleet Telemetry 必须通过 vehicle-command HTTP proxy。\n\n请参考：\n1. https://github.com/teslamotors/vehicle-command\n2. 部署 vehicle-command proxy 服务器\n3. 填写 Vehicle-Command Proxy URL';
+            statusDiv.style.background = '#ffaa00';
+            statusDiv.style.color = '#000';
+            return;
+        }
+        
         // 检查是否有 API Token（用于调用 Fleet API）
         if (!config.apiToken) {
             statusDiv.textContent = '⚠️ 需要 API Token 来配置车辆。请先通过 OAuth 登录获取 Token。';
@@ -293,13 +317,33 @@ async function configureFleetTelemetry() {
         console.log('WebSocket URL:', config.websocketUrl);
         
         // 调用 fleet_telemetry_config 端点
-        // 注意：根据文档，新应用可能需要通过 vehicle-command proxy 调用
-        // 先尝试使用 /command/fleet_telemetry_config 端点（新应用）
-        // 如果失败，再尝试 /fleet_telemetry_config 端点（旧应用）
+        // ⚠️ 重要：根据 Tesla 官方文档，配置 Fleet Telemetry 必须通过 vehicle-command HTTP proxy
+        // 直接调用 Fleet API 会返回 invalid_command 错误
+        // 参考：https://developer.tesla.com/docs/fleet-api#fleet-telemetry
+        // 
+        // 如果用户配置了 vehicle-command proxy URL，使用它；否则尝试直接调用（可能会失败）
+        // 先尝试使用 /command/fleet_telemetry_config 端点（需要通过 vehicle-command proxy）
+        // 如果失败，再尝试 /fleet_telemetry_config 端点（旧应用，已弃用）
+        
+        // 检查是否配置了 vehicle-command proxy
+        const vehicleCommandProxyUrl = config.vehicleCommandProxyUrl || null;
         let url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/command/fleet_telemetry_config`;
-        let apiUrl = config.proxyUrl 
-            ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
-            : url;
+        let apiUrl;
+        
+        // 优先使用 vehicle-command proxy（如果配置了）
+        if (vehicleCommandProxyUrl) {
+            // vehicle-command proxy 直接处理命令，不需要 URL 编码
+            apiUrl = `${vehicleCommandProxyUrl}/api/1/vehicles/${config.vehicleId}/command/fleet_telemetry_config`;
+            console.log('使用 vehicle-command proxy:', apiUrl);
+        } else if (config.proxyUrl) {
+            // 使用 CORS proxy（可能不支持命令签名）
+            apiUrl = `${config.proxyUrl}?url=${encodeURIComponent(url)}`;
+            console.log('使用 CORS proxy（可能不支持命令签名）:', apiUrl);
+        } else {
+            // 直接调用（会被 CORS 阻止，且不支持命令签名）
+            apiUrl = url;
+            console.log('直接调用（可能失败）:', apiUrl);
+        }
         
         console.log('尝试配置 Fleet Telemetry (使用 command 端点)...');
         let response = await fetch(apiUrl, {
@@ -336,15 +380,21 @@ async function configureFleetTelemetry() {
             }
         }
         
-        // 如果 command 端点失败，尝试旧端点
+        // 如果 command 端点失败，尝试旧端点（已弃用，但某些旧应用可能仍支持）
         let usedFallback = false;
         if (shouldFallback) {
             usedFallback = true;
-            console.log('尝试使用旧端点 /fleet_telemetry_config...');
+            console.log('⚠️ command 端点失败，尝试使用旧端点 /fleet_telemetry_config（已弃用）...');
             url = `${TESLA_API_BASE}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
-            apiUrl = config.proxyUrl 
-                ? `${config.proxyUrl}?url=${encodeURIComponent(url)}`
-                : url;
+            
+            // 对于旧端点，也优先使用 vehicle-command proxy
+            if (vehicleCommandProxyUrl) {
+                apiUrl = `${vehicleCommandProxyUrl}/api/1/vehicles/${config.vehicleId}/fleet_telemetry_config`;
+            } else if (config.proxyUrl) {
+                apiUrl = `${config.proxyUrl}?url=${encodeURIComponent(url)}`;
+            } else {
+                apiUrl = url;
+            }
             
             console.log('旧端点 URL:', apiUrl);
             console.log('请求参数:', {
@@ -400,13 +450,15 @@ async function configureFleetTelemetry() {
                 errorMessage += '\n\n请求参数错误。';
                 if (errorData.error && errorData.error.includes('invalid_command')) {
                     errorMessage += '\n\n⚠️ 检测到 invalid_command 错误。';
-                    if (usedFallback) {
-                        errorMessage += '\n\n两个端点都返回了 invalid_command 错误，这可能意味着：\n1. 你的应用是 2024 年之后创建的新应用\n2. 需要使用 vehicle-command proxy（需要私钥签名）\n3. 或者你的应用类型不支持 Fleet Telemetry 配置\n\n解决方案：\n1. 检查你的 Tesla 开发者应用创建时间\n2. 如果是新应用，需要部署 vehicle-command proxy 服务器\n3. 或者使用 Tesla 官方应用来配置 Fleet Telemetry';
+                    if (!vehicleCommandProxyUrl) {
+                        errorMessage += '\n\n❌ 未配置 Vehicle-Command Proxy URL！\n\n根据 Tesla 官方文档，配置 Fleet Telemetry 必须通过 vehicle-command HTTP proxy。\n\n必需步骤：\n1. 部署 vehicle-command proxy 服务器（参考 https://github.com/teslamotors/vehicle-command）\n2. 生成私钥和公钥\n3. 注册公钥到 Tesla 开发者平台\n4. 配置车辆配对密钥（https://tesla.com/_ak/your-domain.com）\n5. 填写 Vehicle-Command Proxy URL 到配置面板\n\n或者使用 Tesla 官方应用来配置 Fleet Telemetry。';
+                    } else if (usedFallback) {
+                        errorMessage += '\n\n两个端点都返回了 invalid_command 错误。\n\n可能原因：\n1. Vehicle-Command Proxy 配置不正确\n2. 私钥未正确配置\n3. 公钥未注册到 Tesla 开发者平台\n4. 车辆未配对密钥\n\n请检查：\n1. Vehicle-Command Proxy 服务器是否正常运行\n2. 私钥文件是否正确配置\n3. 公钥是否已注册\n4. 车辆是否已配对密钥（https://tesla.com/_ak/your-domain.com）';
                     } else {
-                        errorMessage += '\n\n这通常意味着需要使用旧端点或 vehicle-command proxy。';
+                        errorMessage += '\n\nVehicle-Command Proxy 返回错误。请检查 proxy 配置和日志。';
                     }
                 } else {
-                    errorMessage += '\n请检查：\n1. WebSocket URL 格式是否正确（应该是 wss://域名/telemetry）\n2. Vehicle ID 是否正确\n3. Token 是否有效';
+                    errorMessage += '\n请检查：\n1. WebSocket URL 格式是否正确（应该是 wss://域名/telemetry）\n2. Vehicle ID 是否正确\n3. Token 是否有效\n4. Vehicle-Command Proxy 配置是否正确';
                 }
             } else if (response.status === 404) {
                 errorMessage += '\n\n端点不存在。可能是：\n1. Vehicle ID 不正确\n2. 应用类型不支持此端点\n3. 需要使用 vehicle-command proxy';
