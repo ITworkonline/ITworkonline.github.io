@@ -119,6 +119,11 @@ function saveConfig() {
             config.websocketUrl = wsUrl;
             websocketInput.value = wsUrl;
         }
+        // 确保 WebSocket URL 有正确的协议前缀
+        if (config.websocketUrl && !config.websocketUrl.startsWith('wss://') && !config.websocketUrl.startsWith('ws://')) {
+            config.websocketUrl = 'wss://' + config.websocketUrl;
+            websocketInput.value = config.websocketUrl;
+        }
     }
     
     localStorage.setItem('teslaDashConfig', JSON.stringify(config));
@@ -159,12 +164,43 @@ async function configureFleetTelemetry() {
             }
         }
         
+        // 确保 WebSocket URL 有正确的协议前缀
+        if (!config.websocketUrl.startsWith('wss://') && !config.websocketUrl.startsWith('ws://')) {
+            // 如果没有协议，添加 wss://
+            if (config.websocketUrl.includes('railway.app') || config.websocketUrl.includes('render.com') || config.websocketUrl.includes('vercel.app')) {
+                config.websocketUrl = 'wss://' + config.websocketUrl;
+            } else {
+                config.websocketUrl = 'wss://' + config.websocketUrl;
+            }
+        }
+        
         // 检查是否有 API Token（用于调用 Fleet API）
         if (!config.apiToken) {
             statusDiv.textContent = '⚠️ 需要 API Token 来配置车辆。请先通过 OAuth 登录获取 Token。';
             statusDiv.style.background = '#ffaa00';
             statusDiv.style.color = '#000';
             return;
+        }
+        
+        // 检查 token 是否过期，如果过期则先刷新
+        if (isTokenExpired()) {
+            statusDiv.textContent = 'Token 已过期，正在刷新...';
+            statusDiv.style.background = '#333';
+            statusDiv.style.color = '#fff';
+            try {
+                await refreshAccessToken();
+                // 刷新后重新加载配置
+                const savedConfig = localStorage.getItem('teslaDashConfig');
+                if (savedConfig) {
+                    const saved = JSON.parse(savedConfig);
+                    config = { ...config, ...saved };
+                }
+            } catch (refreshError) {
+                statusDiv.textContent = '❌ Token 刷新失败，请重新登录';
+                statusDiv.style.background = '#ff0000';
+                statusDiv.style.color = '#fff';
+                throw new Error('Token 刷新失败: ' + refreshError.message);
+            }
         }
         
         // 检查是否有 Vehicle ID
