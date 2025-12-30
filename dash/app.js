@@ -171,22 +171,39 @@ function saveConfig() {
         }
     }
     
-    localStorage.setItem('teslaDashConfig', JSON.stringify(config));
-    
-    // 重新开始更新
-    if (updateTimer) {
-        clearInterval(updateTimer);
+    // 保存更新间隔
+    const updateIntervalInput = document.getElementById('updateInterval');
+    if (updateIntervalInput) {
+        const intervalValue = parseInt(updateIntervalInput.value) || 2;
+        config.updateInterval = Math.max(1, Math.min(60, intervalValue)); // 限制在 1-60 秒之间
+        updateIntervalInput.value = config.updateInterval;
     }
     
-    // 只有在配置了 Telemetry 且不在 OAuth 回调过程中时才自动启动
-    const urlParams = new URLSearchParams(window.location.search);
-    const isOAuthCallback = urlParams.get('code') || urlParams.get('error');
+    localStorage.setItem('teslaDashConfig', JSON.stringify(config));
     
-    if (config.telemetryUrl && config.vin && !isOAuthCallback) {
-        // 延迟启动，避免在保存配置时立即启动
-        setTimeout(() => {
-            startUpdates();
-        }, 1000);
+    // 重新开始更新（如果正在运行）
+    if (updateTimer) {
+        clearInterval(updateTimer);
+        updateTimer = null;
+        // 使用新的间隔重新启动
+        const urlParams = new URLSearchParams(window.location.search);
+        const isOAuthCallback = urlParams.get('code') || urlParams.get('error');
+        if (!isOAuthCallback) {
+            setTimeout(() => {
+                startUpdates();
+            }, 500);
+        }
+    } else {
+        // 只有在配置了 Telemetry 且不在 OAuth 回调过程中时才自动启动
+        const urlParams = new URLSearchParams(window.location.search);
+        const isOAuthCallback = urlParams.get('code') || urlParams.get('error');
+        
+        if (config.telemetryUrl && config.vin && !isOAuthCallback) {
+            // 延迟启动，避免在保存配置时立即启动
+            setTimeout(() => {
+                startUpdates();
+            }, 1000);
+        }
     }
     
     toggleConfig();
@@ -459,10 +476,16 @@ function initializeSpeedometer() {
 
 // 开始更新数据
 function startUpdates() {
-    // 如果已经有定时器在运行，不重复启动
+    // 如果已经有定时器在运行，先清除旧的
     if (updateTimer) {
-        console.log('定时器已在运行，跳过启动');
-        return;
+        if (typeof updateTimer === 'object' && updateTimer.stop) {
+            updateTimer.stop();
+        } else if (typeof updateTimer === 'number') {
+            clearTimeout(updateTimer);
+        } else {
+            clearInterval(updateTimer);
+        }
+        updateTimer = null;
     }
     
     // 如果使用 Telemetry，不需要 API Token 和 Vehicle ID
@@ -473,25 +496,73 @@ function startUpdates() {
         }
     }
     
-    // 确保更新间隔至少为 2 秒
-    const updateInterval = Math.max((config.updateInterval || 2) * 1000, MIN_FETCH_INTERVAL);
+    // 重置失败计数
+    if (!window.telemetryFailCount) {
+        window.telemetryFailCount = 0;
+    }
+    
+    // 计算实际更新间隔（考虑失败次数）
+    function getActualInterval() {
+        const baseIntervalSeconds = Math.max(config.updateInterval || 2, 1);
+        // 如果失败次数多，增加间隔（最多增加到 30 秒）
+        const failCount = window.telemetryFailCount || 0;
+        if (failCount > 5) {
+            // 失败超过 5 次，使用更长的间隔（10-30 秒）
+            const extendedInterval = Math.min(10 + (failCount - 5) * 2, 30);
+            return extendedInterval * 1000;
+        }
+        return Math.max(baseIntervalSeconds * 1000, 1000); // 最小 1 秒
+    }
+    
+    // 使用一个对象来存储运行状态和定时器 ID
+    const timerState = {
+        isRunning: true,
+        currentTimeout: null,
+        stop: function() {
+            this.isRunning = false;
+            if (this.currentTimeout) {
+                clearTimeout(this.currentTimeout);
+                this.currentTimeout = null;
+            }
+        }
+    };
+    
+    // 设置定时更新（使用动态间隔）
+    function scheduleNext() {
+        if (!timerState.isRunning) return;
+        
+        const actualInterval = getActualInterval();
+        timerState.currentTimeout = setTimeout(async () => {
+            if (!timerState.isRunning) return;
+            
+            try {
+                await fetchVehicleData();
+            } catch (error) {
+                console.error('获取数据失败:', error);
+            } finally {
+                // 递归调度下一次
+                scheduleNext();
+            }
+        }, actualInterval);
+    }
     
     // 立即执行一次（延迟一下，避免在页面加载时立即请求）
-    setTimeout(() => {
-        if (updateTimer) {
-            fetchVehicleData();
+    setTimeout(async () => {
+        if (timerState.isRunning) {
+            try {
+                await fetchVehicleData();
+            } catch (error) {
+                console.error('首次获取数据失败:', error);
+            }
+            // 开始定时更新
+            scheduleNext();
         }
     }, 500);
     
-    // 设置定时更新
-    updateTimer = setInterval(() => {
-        // 检查定时器是否仍然有效（防止在停止后仍然执行）
-        if (updateTimer) {
-            fetchVehicleData();
-        }
-    }, updateInterval);
+    // 保存定时器状态对象
+    updateTimer = timerState;
     
-    console.log('✅ 开始更新数据，间隔:', updateInterval / 1000, '秒');
+    console.log('✅ 开始更新数据，基础间隔:', (config.updateInterval || 2), '秒');
     
     // 更新按钮状态
     updateControlButtons(true);
@@ -502,10 +573,24 @@ function stopUpdates() {
     console.log('停止更新 - 当前 updateTimer:', updateTimer);
     
     if (updateTimer) {
-        clearInterval(updateTimer);
+        // 如果是对象（新的实现），调用 stop 方法
+        if (typeof updateTimer === 'object' && updateTimer.stop) {
+            updateTimer.stop();
+        }
+        // 如果是数字（setTimeout ID），清除它
+        else if (typeof updateTimer === 'number') {
+            clearTimeout(updateTimer);
+        }
+        // 如果是旧的 setInterval，清除它
+        else if (typeof updateTimer === 'object') {
+            clearInterval(updateTimer);
+        }
         updateTimer = null;
         console.log('定时器已清除');
     }
+    
+    // 重置失败计数
+    window.telemetryFailCount = 0;
     
     // 更新按钮状态
     updateControlButtons(false);
@@ -1341,6 +1426,9 @@ async function fetchVehicleData() {
             const telemetryData = await fetchVehicleDataFromTelemetry();
             
             if (telemetryData) {
+                // 重置失败计数（成功获取数据）
+                window.telemetryFailCount = 0;
+                
                 // 更新速度
                 // 服务器返回的 speed 已经是 km/h（服务器已转换）
                 // 如果 speed 不存在，尝试使用 speedMph 并转换
@@ -1391,12 +1479,29 @@ async function fetchVehicleData() {
                     updateControlButtons(true);
                 }
                 return;
-            } else {
-                // Telemetry 获取失败（可能是 404，车辆还没有配置）
-                // 给出友好的提示
-                updateConnectionStatus('error', '⚠️ 服务器没有找到车辆数据\n\n可能原因：\n1. 车辆还没有配置发送数据到服务器\n2. 车辆还没有开始发送数据\n\n解决方案：\n1. 点击"⚙️ 配置车辆 Fleet Telemetry"来配置车辆\n2. 或等待车辆开始发送数据');
-                console.warn('从 Telemetry 服务器获取数据失败，尝试使用 Fleet API...');
+        } else {
+            // Telemetry 获取失败（可能是 404，车辆还没有配置）
+            // 如果持续失败，减少请求频率
+            if (!window.telemetryFailCount) {
+                window.telemetryFailCount = 0;
             }
+            window.telemetryFailCount++;
+            
+            // 如果连续失败多次，增加请求间隔
+            if (window.telemetryFailCount > 5) {
+                console.log('Telemetry 服务器持续返回 404，减少请求频率...');
+                // 暂时停止 Telemetry 请求，只使用 Fleet API
+                if (updateTimer) {
+                    // 不停止定时器，但跳过 Telemetry 请求
+                }
+            }
+            
+            // 给出友好的提示（只在第一次或每 10 次失败时显示）
+            if (window.telemetryFailCount === 1 || window.telemetryFailCount % 10 === 0) {
+                updateConnectionStatus('error', '⚠️ 服务器没有找到车辆数据\n\n可能原因：\n1. 车辆还没有配置发送数据到服务器\n2. 车辆还没有开始发送数据\n\n解决方案：\n1. 点击"⚙️ 配置车辆 Fleet Telemetry"来配置车辆\n2. 或等待车辆开始发送数据\n3. 如果已配置，请检查 Railway 服务器日志');
+            }
+            console.warn('从 Telemetry 服务器获取数据失败，尝试使用 Fleet API...');
+        }
         }
         
         // 如果没有配置 Telemetry 或获取失败，使用 Fleet API（需要 API Token 和 Vehicle ID）
