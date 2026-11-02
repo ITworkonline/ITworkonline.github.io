@@ -1898,3 +1898,32 @@ textarea.form-input::-webkit-resizer { display: none; }
   .timeline-text { max-width: 700px; }
 
 }
+
+/*-----------------------------------*\
+  #CUSTOM OVERRIDES (2026-11)
+\*-----------------------------------*/
+
+/* links inside running text render inline with the accent color,
+   instead of the global block-level anchor */
+.about-text a,
+.service-item-text a {
+  display: inline;
+  color: var(--orange-yellow-crayola);
+}
+
+.about-text a:hover,
+.service-item-text a:hover { text-decoration: underline; }
+
+/* center sidebar name and resume link without global selectors */
+.sidebar .name { text-align: center; margin-inline: auto; }
+.info-content .resume { text-align: center; }
+
+/* GitHub contribution chart */
+.github-chart-link { width: 100%; }
+
+.github-chart {
+  width: 100%;
+  padding: 15px;
+  background: var(--border-gradient-onyx);
+  border-radius: 14px;
+}
