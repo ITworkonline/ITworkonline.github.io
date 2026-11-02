@@ -2,130 +2,167 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Engineering Chapter Quizzes</title>
 <meta name="description" content="Self-test quizzes for each chapter of AI Engineering by Chip Huyen — written as I read the book. Instant grading with explanations.">
 <meta property="og:title" content="AI Engineering Chapter Quizzes">
 <meta property="og:description" content="Test your understanding of AI Engineering (Chip Huyen, O'Reilly) — 10 questions per chapter with explanations. New chapters added as I read.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://blog.itworkonline.top/ai-engineering-quiz/">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: single centered column, study-card quiz flow; bookish serif display + plex body */
-:root{
-  --bg:#f7f6f3;
-  --surface:#ffffff;
-  --ink:#1f2823;
-  --muted:#5f6b64;
-  --line:#e3e1da;
-  --accent:#0e6f5c;
-  --accent-ink:#ffffff;
-  --accent-soft:#e3f0ec;
-  --good:#1a7f4e;
-  --good-soft:#e5f3ea;
-  --bad:#b3372e;
-  --bad-soft:#f8e9e7;
-  --display:"Source Serif 4",Georgia,serif;
-  --body:"IBM Plex Sans",system-ui,sans-serif;
-  --mono:"IBM Plex Mono",ui-monospace,monospace;
-}
-@media (prefers-color-scheme: dark){
-  :root{
-    --bg:#171b19; --surface:#1f2421; --ink:#e8e6df; --muted:#9aa69f;
-    --line:#333b36; --accent:#4cc2a4; --accent-ink:#0f1512; --accent-soft:#223732;
-    --good:#58c98b; --good-soft:#1e3328; --bad:#e0796f; --bad-soft:#3a2321;
-    color-scheme:dark;
-  }
-}
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14.5px;margin:0;padding-block:0 48px;padding-inline:16px;line-height:1.65}
-.wrap{max-width:720px;margin:0 auto}
-header{padding-block:36px 20px}
-.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-h1{font-family:var(--display);font-size:clamp(26px,5vw,34px);margin:6px 0 4px;text-wrap:balance}
-.sub{color:var(--muted);margin:0;font-size:14.5px}
-.chapters{display:flex;flex-wrap:wrap;gap:8px;margin-block:20px 28px}
-.chip{font-family:var(--mono);font-size:13px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
-.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
-.chip:disabled{opacity:.45;cursor:not-allowed}
-.chip:focus-visible,.opt:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.meta{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-family:var(--mono);font-size:13px;color:var(--muted)}
-.bar{height:4px;background:var(--line);border-radius:2px;margin:10px 0 26px;overflow:hidden}
-.bar i{display:block;height:100%;background:var(--accent);border-radius:2px;width:0;transition:width .3s ease}
-.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 24px}
-.qtext{font-family:var(--display);font-size:clamp(18px,3.4vw,21px);font-weight:600;line-height:1.5;margin:0 0 20px;text-wrap:balance}
-.opts{display:flex;flex-direction:column;gap:10px}
-.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;min-width:0;padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font:inherit;font-size:15px;line-height:1.55;cursor:pointer}
-.opt:not(:disabled):hover{border-color:var(--accent);background:var(--accent-soft)}
-.opt .key{font-family:var(--mono);font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-top:2px;flex:none}
-.opt.correct{border-color:var(--good);background:var(--good-soft)}
-.opt.correct .key{border-color:var(--good);color:var(--good)}
-.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
-.opt.wrong .key{border-color:var(--bad);color:var(--bad)}
-.opt:disabled{cursor:default;opacity:.92}
-.explain{margin-top:18px;padding:15px 17px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--line);font-size:14.5px}
-.explain b{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
-.explain.ok b{color:var(--good)}
-.explain.ko b{color:var(--bad)}
-.actions{display:flex;justify-content:flex-end;margin-top:20px}
-.btn{font:inherit;font-size:15px;font-weight:600;padding:10px 22px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
-.result{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:30px 26px;text-align:center}
-.score{font-family:var(--display);font-size:52px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:8px 0 2px}
-.score small{font-size:22px;color:var(--muted);font-weight:600}
-.verdict{font-size:16px;margin:10px 0 2px}
-.best{font-family:var(--mono);font-size:13px;color:var(--muted)}
-.review{text-align:left;margin-top:24px;border-top:1px solid var(--line);padding-top:18px}
-.review h2{font-family:var(--display);font-size:17px;margin:0 0 12px}
-.review ul{margin:0;padding-left:20px;font-size:14.5px}
-.review li{margin-bottom:10px}
-.review .ra{color:var(--good);font-weight:600}
-.result .actions{justify-content:center;gap:12px}
-footer{margin-top:34px;font-size:13px;color:var(--muted);text-align:center;line-height:1.7}
-footer a{color:var(--accent)}
+body{
+  margin:0;
+  background:#fff;
+  color:#1a1a1a;
+  font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+.layout{
+  max-width:900px;
+  margin:0 auto;
+  padding:40px 20px 60px;
+  display:flex;
+  gap:48px;
+  align-items:flex-start;
+}
+main{flex:1;min-width:0}
+h1{font-size:22px;margin:0 0 6px;font-weight:600}
+.sub{color:#666;font-size:14px;margin:0 0 28px}
+h2{font-size:17px;font-weight:600;margin:0 0 20px}
+
+/* right sidebar */
+aside{
+  width:150px;
+  flex:none;
+  position:sticky;
+  top:24px;
+  border-left:1px solid #e5e5e5;
+  padding-left:20px;
+  font-size:14px;
+}
+aside .label{color:#999;font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
+aside button{
+  display:block;
+  width:100%;
+  text-align:left;
+  background:none;
+  border:none;
+  padding:5px 8px;
+  margin:0 0 2px;
+  font:inherit;
+  color:#1a1a1a;
+  cursor:pointer;
+  border-radius:4px;
+}
+aside button:hover:not(:disabled){background:#f2f2f2}
+aside button[aria-pressed="true"]{background:#1a1a1a;color:#fff}
+aside button:disabled{color:#bbb;cursor:default}
+
+/* quiz */
+.meta{display:flex;justify-content:space-between;font-size:13px;color:#888;margin-bottom:18px}
+.opts{display:flex;flex-direction:column;gap:8px}
+.opt{
+  display:flex;gap:10px;align-items:flex-start;
+  width:100%;min-width:0;text-align:left;
+  padding:10px 12px;
+  background:#fff;
+  border:1px solid #d9d9d9;
+  border-radius:4px;
+  font:inherit;font-size:15px;line-height:1.55;
+  color:#1a1a1a;
+  cursor:pointer;
+}
+.opt:hover:not(:disabled){border-color:#1a1a1a}
+.opt:disabled{cursor:default}
+.opt .key{color:#999;flex:none}
+.opt.correct{border-color:#2e7d32;background:#f3faf4}
+.opt.wrong{border-color:#c62828;background:#fdf4f4}
+.explain{
+  margin-top:16px;
+  padding:12px 14px;
+  border-left:3px solid #ccc;
+  background:#fafafa;
+  font-size:14px;
+  color:#333;
+}
+.explain b{display:block;margin-bottom:4px;font-size:13px}
+.explain.ok b{color:#2e7d32}
+.explain.ko b{color:#c62828}
+.actions{margin-top:20px}
+.btn{
+  font:inherit;font-size:15px;
+  padding:8px 20px;
+  background:#1a1a1a;color:#fff;
+  border:1px solid #1a1a1a;border-radius:4px;
+  cursor:pointer;
+}
+.btn:hover{background:#000}
+
+/* result */
+.score{font-size:40px;font-weight:600;margin:6px 0}
+.score small{font-size:20px;color:#888;font-weight:400}
+.verdict{margin:4px 0 2px}
+.best{font-size:13px;color:#888}
+.review{margin-top:24px;border-top:1px solid #e5e5e5;padding-top:16px}
+.review h3{font-size:15px;margin:0 0 10px}
+.review ul{margin:0;padding-left:20px;font-size:14px}
+.review li{margin-bottom:8px}
+.review .ra{color:#2e7d32}
+footer{margin-top:40px;padding-top:16px;border-top:1px solid #e5e5e5;font-size:13px;color:#888;line-height:1.7}
+footer a{color:#555}
 [hidden]{display:none!important}
-@media (prefers-reduced-motion: reduce){.bar i{transition:none}}
+button:focus-visible{outline:2px solid #1a1a1a;outline-offset:2px}
+
+@media (max-width:640px){
+  .layout{flex-direction:column-reverse;gap:24px}
+  aside{
+    width:100%;position:static;border-left:none;padding-left:0;
+    border-bottom:1px solid #e5e5e5;padding-bottom:14px;
+  }
+  aside .chlist{display:flex;flex-wrap:wrap;gap:4px}
+  aside button{width:auto;padding:4px 10px}
+}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div class="eyebrow">Reading &amp; self-testing · AI Engineering · Chip Huyen (O'Reilly)</div>
-    <h1 id="chapter-title">Chapter 1 · Introduction to Building AI Applications with Foundation Models</h1>
-    <p class="sub">After finishing each chapter, I test my understanding with 10 questions. Wrong answers are fine — every explanation points back to the book's argument.</p>
-  </header>
+<div class="layout">
+  <main>
+    <h1>AI Engineering — Chapter Quizzes</h1>
+    <p class="sub">10 questions per chapter of <em>AI Engineering</em> by Chip Huyen. I write these as I read, to test my own understanding.</p>
 
-  <nav class="chapters" id="chapter-nav" aria-label="Select chapter"></nav>
-  <p class="sub" id="locked-note" style="margin:-14px 0 24px" hidden>Quiz for this chapter isn't written yet — I'll add it once I finish reading.</p>
+    <h2 id="chapter-title"></h2>
+    <p class="sub" id="locked-note" hidden>Quiz for this chapter isn't written yet — it will be added once I finish reading.</p>
 
-  <section id="quiz-area">
-    <div class="meta"><span id="q-counter"></span><span id="q-score"></span></div>
-    <div class="bar"><i id="q-bar"></i></div>
-    <div class="qcard">
-      <p class="qtext" id="q-text"></p>
+    <section id="quiz-area">
+      <div class="meta"><span id="q-counter"></span><span id="q-score"></span></div>
+      <p id="q-text" style="font-weight:600;margin:0 0 16px"></p>
       <div class="opts" id="q-opts"></div>
       <div class="explain" id="q-explain" hidden></div>
       <div class="actions"><button class="btn" id="q-next" hidden>Next</button></div>
-    </div>
-  </section>
+    </section>
 
-  <section class="result" id="result-area" hidden>
-    <div class="eyebrow" id="r-chapter"></div>
-    <div class="score"><span id="r-score"></span><small id="r-total"></small></div>
-    <p class="verdict" id="r-verdict"></p>
-    <p class="best" id="r-best"></p>
-    <div class="review" id="r-review" hidden>
-      <h2>Worth revisiting</h2>
-      <ul id="r-review-list"></ul>
-    </div>
-    <div class="actions"><button class="btn" id="r-retry">Retake quiz</button></div>
-  </section>
+    <section id="result-area" hidden>
+      <div class="score"><span id="r-score"></span><small id="r-total"></small></div>
+      <p class="verdict" id="r-verdict"></p>
+      <p class="best" id="r-best"></p>
+      <div class="review" id="r-review" hidden>
+        <h3>Worth revisiting</h3>
+        <ul id="r-review-list"></ul>
+      </div>
+      <div class="actions"><button class="btn" id="r-retry">Retake quiz</button></div>
+    </section>
 
-  <footer>
-    Currently covered: Chapters 1–2 · New chapters added as I read.<br>
-    Part of my reading notes on <em>AI Engineering: Building Applications with Foundation Models</em> (Chip Huyen, O'Reilly 2025).
-    · <a href="https://blog.itworkonline.top">blog.itworkonline.top</a>
-  </footer>
+    <footer>
+      Currently covered: Chapters 1–2 · New chapters added as I read.<br>
+      Based on <em>AI Engineering: Building Applications with Foundation Models</em> (Chip Huyen, O'Reilly 2025)
+      · <a href="https://blog.itworkonline.top">blog.itworkonline.top</a>
+    </footer>
+  </main>
+
+  <aside aria-label="Select chapter">
+    <div class="label">Chapters</div>
+    <div class="chlist" id="chapter-nav"></div>
+  </aside>
 </div>
 
 <script>
@@ -372,8 +409,7 @@ function buildNav(){
   nav.innerHTML = "";
   for(let c=1;c<=TOTAL_CHAPTERS;c++){
     const b = document.createElement("button");
-    b.className = "chip";
-    b.textContent = "Ch " + c;
+    b.textContent = "Chapter " + c;
     const has = !!QUIZZES[c];
     b.disabled = !has;
     if(!has) b.title = "Coming after I finish this chapter";
@@ -393,7 +429,7 @@ function setBest(c,v){ try{
 function startQuiz(){
   const quiz = QUIZZES[current];
   $("result-area").hidden = true;
-  if(!quiz){ $("quiz-area").hidden = true; $("locked-note").hidden = false; $("chapter-title").textContent = "Chapter " + current + " · Coming soon"; return; }
+  if(!quiz){ $("quiz-area").hidden = true; $("locked-note").hidden = false; $("chapter-title").textContent = "Chapter " + current; return; }
   $("locked-note").hidden = true;
   $("quiz-area").hidden = false;
   $("chapter-title").textContent = quiz.title;
@@ -407,7 +443,6 @@ function renderQuestion(){
   answered = false;
   $("q-counter").textContent = `Question ${qi+1} of ${quiz.questions.length}`;
   $("q-score").textContent = `Correct: ${score}`;
-  $("q-bar").style.width = (qi/quiz.questions.length*100)+"%";
   $("q-text").textContent = q.q;
   $("q-explain").hidden = true;
   $("q-next").hidden = true;
@@ -416,7 +451,7 @@ function renderQuestion(){
   q.opts.forEach((t,i)=>{
     const b = document.createElement("button");
     b.className = "opt";
-    b.innerHTML = `<span class="key">${"ABCD"[i]}</span><span></span>`;
+    b.innerHTML = `<span class="key">${"ABCD"[i]}.</span><span></span>`;
     b.lastElementChild.textContent = t;
     b.addEventListener("click", ()=>answer(i,b));
     box.appendChild(b);
@@ -453,7 +488,6 @@ function showResult(){
   const n = quiz.questions.length;
   $("quiz-area").hidden = true;
   $("result-area").hidden = false;
-  $("r-chapter").textContent = quiz.title;
   $("r-score").textContent = score;
   $("r-total").textContent = " / " + n;
   const pct = score/n;
