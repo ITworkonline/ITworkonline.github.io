@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI Engineering Chapter Quizzes</title>
+<meta name="description" content="Self-test quizzes for each chapter of AI Engineering by Chip Huyen — written as I read the book. Instant grading with explanations.">
+<meta property="og:title" content="AI Engineering Chapter Quizzes">
+<meta property="og:description" content="Test your understanding of AI Engineering (Chip Huyen, O'Reilly) — 10 questions per chapter with explanations. New chapters added as I read.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://blog.itworkonline.top/ai-engineering-quiz/">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: single centered column, study-card quiz flow; bookish serif display + plex body */
+:root{
+  --bg:#f7f6f3;
+  --surface:#ffffff;
+  --ink:#1f2823;
+  --muted:#5f6b64;
+  --line:#e3e1da;
+  --accent:#0e6f5c;
+  --accent-ink:#ffffff;
+  --accent-soft:#e3f0ec;
+  --good:#1a7f4e;
+  --good-soft:#e5f3ea;
+  --bad:#b3372e;
+  --bad-soft:#f8e9e7;
+  --display:"Source Serif 4",Georgia,serif;
+  --body:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#171b19; --surface:#1f2421; --ink:#e8e6df; --muted:#9aa69f;
+    --line:#333b36; --accent:#4cc2a4; --accent-ink:#0f1512; --accent-soft:#223732;
+    --good:#58c98b; --good-soft:#1e3328; --bad:#e0796f; --bad-soft:#3a2321;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14.5px;margin:0;padding-block:0 48px;padding-inline:16px;line-height:1.65}
+.wrap{max-width:720px;margin:0 auto}
+header{padding-block:36px 20px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--display);font-size:clamp(26px,5vw,34px);margin:6px 0 4px;text-wrap:balance}
+.sub{color:var(--muted);margin:0;font-size:14.5px}
+.chapters{display:flex;flex-wrap:wrap;gap:8px;margin-block:20px 28px}
+.chip{font-family:var(--mono);font-size:13px;padding:7px 13px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+.chip:disabled{opacity:.45;cursor:not-allowed}
+.chip:focus-visible,.opt:focus-visible,.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.meta{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.bar{height:4px;background:var(--line);border-radius:2px;margin:10px 0 26px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:2px;width:0;transition:width .3s ease}
+.qcard{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 24px}
+.qtext{font-family:var(--display);font-size:clamp(18px,3.4vw,21px);font-weight:600;line-height:1.5;margin:0 0 20px;text-wrap:balance}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;min-width:0;padding:13px 15px;border:1px solid var(--line);border-radius:10px;background:transparent;color:var(--ink);font:inherit;font-size:15px;line-height:1.55;cursor:pointer}
+.opt:not(:disabled):hover{border-color:var(--accent);background:var(--accent-soft)}
+.opt .key{font-family:var(--mono);font-size:12.5px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 7px;margin-top:2px;flex:none}
+.opt.correct{border-color:var(--good);background:var(--good-soft)}
+.opt.correct .key{border-color:var(--good);color:var(--good)}
+.opt.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.opt.wrong .key{border-color:var(--bad);color:var(--bad)}
+.opt:disabled{cursor:default;opacity:.92}
+.explain{margin-top:18px;padding:15px 17px;border-radius:10px;background:var(--accent-soft);border:1px solid var(--line);font-size:14.5px}
+.explain b{display:block;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.explain.ok b{color:var(--good)}
+.explain.ko b{color:var(--bad)}
+.actions{display:flex;justify-content:flex-end;margin-top:20px}
+.btn{font:inherit;font-size:15px;font-weight:600;padding:10px 22px;border-radius:10px;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);cursor:pointer}
+.result{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:30px 26px;text-align:center}
+.score{font-family:var(--display);font-size:52px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;margin:8px 0 2px}
+.score small{font-size:22px;color:var(--muted);font-weight:600}
+.verdict{font-size:16px;margin:10px 0 2px}
+.best{font-family:var(--mono);font-size:13px;color:var(--muted)}
+.review{text-align:left;margin-top:24px;border-top:1px solid var(--line);padding-top:18px}
+.review h2{font-family:var(--display);font-size:17px;margin:0 0 12px}
+.review ul{margin:0;padding-left:20px;font-size:14.5px}
+.review li{margin-bottom:10px}
+.review .ra{color:var(--good);font-weight:600}
+.result .actions{justify-content:center;gap:12px}
+footer{margin-top:34px;font-size:13px;color:var(--muted);text-align:center;line-height:1.7}
+footer a{color:var(--accent)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion: reduce){.bar i{transition:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Reading &amp; self-testing · AI Engineering · Chip Huyen (O'Reilly)</div>
+    <h1 id="chapter-title">Chapter 1 · Introduction to Building AI Applications with Foundation Models</h1>
+    <p class="sub">After finishing each chapter, I test my understanding with 10 questions. Wrong answers are fine — every explanation points back to the book's argument.</p>
+  </header>
+
+  <nav class="chapters" id="chapter-nav" aria-label="Select chapter"></nav>
+  <p class="sub" id="locked-note" style="margin:-14px 0 24px" hidden>Quiz for this chapter isn't written yet — I'll add it once I finish reading.</p>
+
+  <section id="quiz-area">
+    <div class="meta"><span id="q-counter"></span><span id="q-score"></span></div>
+    <div class="bar"><i id="q-bar"></i></div>
+    <div class="qcard">
+      <p class="qtext" id="q-text"></p>
+      <div class="opts" id="q-opts"></div>
+      <div class="explain" id="q-explain" hidden></div>
+      <div class="actions"><button class="btn" id="q-next" hidden>Next</button></div>
+    </div>
+  </section>
+
+  <section class="result" id="result-area" hidden>
+    <div class="eyebrow" id="r-chapter"></div>
+    <div class="score"><span id="r-score"></span><small id="r-total"></small></div>
+    <p class="verdict" id="r-verdict"></p>
+    <p class="best" id="r-best"></p>
+    <div class="review" id="r-review" hidden>
+      <h2>Worth revisiting</h2>
+      <ul id="r-review-list"></ul>
+    </div>
+    <div class="actions"><button class="btn" id="r-retry">Retake quiz</button></div>
+  </section>
+
+  <footer>
+    Currently covered: Chapters 1–2 · New chapters added as I read.<br>
+    Part of my reading notes on <em>AI Engineering: Building Applications with Foundation Models</em> (Chip Huyen, O'Reilly 2025).
+    · <a href="https://blog.itworkonline.top">blog.itworkonline.top</a>
+  </footer>
+</div>
+
+<script>
+const QUIZZES = {
+  1: {
+    title: "Chapter 1 · Introduction to Building AI Applications with Foundation Models",
+    questions: [
+      {
+        q: "Why was self-supervision the key that allowed language models to scale into LLMs?",
+        opts: [
+          "It requires no labels at all, which is what unsupervised learning means",
+          "Labels can be inferred from the input data itself, removing the human-annotation bottleneck",
+          "It reduces the number of parameters a model needs",
+          "It only needs a small set of high-quality human-labeled data"
+        ],
+        a: 1,
+        why: "In self-supervision, labels are inferred from the input itself: the sentence “I love street food.” alone yields six (context → next token) training samples, no annotators needed. Since text is everywhere on the internet, training data can grow almost without limit — that's what let language models scale. Don't confuse it with unsupervised learning, which needs no labels at all; self-supervision still has labels, they just come from the data."
+      },
+      {
+        q: "You're building sentiment analysis or code debugging — tasks that need context from both before and after a position in the text. Which model family has traditionally been the common choice?",
+        opts: [
+          "Autoregressive language models, like the GPT family",
+          "Masked language models, like BERT",
+          "Embedding models, like CLIP",
+          "Diffusion models, like Stable Diffusion"
+        ],
+        a: 1,
+        why: "A masked language model is trained to fill in the blank using context from both sides of the missing token (e.g., BERT), which suits non-generative tasks like sentiment analysis, text classification, and code debugging. An autoregressive model predicts the next token using only preceding tokens — it's the model of choice for text generation, which is why it's far more popular today."
+      },
+      {
+        q: "With GPT-4's tokenizer, roughly how many tokens is a 750-word English article?",
+        opts: [
+          "About 560 tokens",
+          "About 750 tokens",
+          "About 1,000 tokens",
+          "About 3,000 tokens"
+        ],
+        a: 2,
+        why: "The book's rule of thumb: one GPT-4 token ≈ ¾ of an English word, i.e., 100 tokens ≈ 75 words. So 750 words ÷ 0.75 ≈ 1,000 tokens. This conversion comes up constantly when estimating API costs and context-window budgets."
+      },
+      {
+        q: "Which statement about CLIP is correct?",
+        opts: [
+          "CLIP is a generative multimodal model (LMM) that produces open-ended outputs",
+          "CLIP's 400M (image, text) pairs were manually labeled",
+          "CLIP is an embedding model trained with natural language supervision, and it became the backbone of later generative multimodal models",
+          "CLIP only handles text, not images"
+        ],
+        a: 2,
+        why: "CLIP is not generative — it was trained to produce joint embeddings of text and images. OpenAI used a variant of self-supervision called natural language supervision: instead of labeling images, they collected (image, text) pairs that co-occurred on the internet — 400 million pairs, 400× the size of ImageNet, at zero labeling cost. Multimodal embedding models like CLIP are the backbones of generative models such as Flamingo, LLaVA, and Gemini."
+      },
+      {
+        q: "Prompt engineering, RAG, and finetuning are the three most common model-adaptation techniques. Grouped by whether they update model weights, which split is correct?",
+        opts: [
+          "Updates weights: RAG and finetuning · Doesn't: prompt engineering",
+          "Updates weights: finetuning · Doesn't: prompt engineering and RAG",
+          "All three update weights, just to different degrees",
+          "None of them update weights — they're all prompt-based"
+        ],
+        a: 1,
+        why: "Adaptation techniques fall into two buckets. Prompt-based techniques — prompt engineering and RAG — steer the model through instructions and context without touching the weights; they're quick to start and need little data. Finetuning continues training the model and updates its weights; it's more complex and data-hungry, but can significantly improve quality, latency, and cost."
+      },
+      {
+        q: "The author tracked GitHub repos across the AI stack through 2023 (post-ChatGPT). Which layer grew the least, and why?",
+        opts: [
+          "The application layer — because apps went closed-source",
+          "The model development layer — because nobody trains models anymore",
+          "The infrastructure layer — because core needs like resource management, serving, and monitoring didn't change",
+          "All three layers grew at about the same rate"
+        ],
+        a: 2,
+        why: "Applications and application development exploded in 2023; infrastructure grew the least. That supports a theme that runs through the whole book: models and apps changed, but the core infrastructure needs — resource management, serving, monitoring — stayed the same, so a decade of ML engineering experience still applies."
+      },
+      {
+        q: "In Apple's product framework, traffic alerts on Google Maps are a proactive feature. Why do proactive features typically need a higher quality bar?",
+        opts: [
+          "Because they must be generated in real time, so latency requirements are extreme",
+          "Because users never asked for them — low quality feels intrusive. And since they can be precomputed, latency isn't an excuse",
+          "Because they must be reviewed by a human before being shown",
+          "Because proactive features are always critical — the product can't work without them"
+        ],
+        a: 1,
+        why: "Reactive features respond to a user's request and usually need to be fast. Proactive features appear when there's an opportunity — they can be precomputed, so latency matters less. But because users didn't ask for them, low-quality proactive output reads as intrusive or annoying, hence the higher quality bar. The other two axes in the framework: critical vs. complementary (Face ID vs. Smart Compose) and dynamic vs. static."
+      },
+      {
+        q: "LinkedIn (2024) reached 80% of their target experience in one month, then needed four more months to pass 95%. What's the lesson?",
+        opts: [
+          "LinkedIn's engineering team was just inefficient",
+          "The last mile challenge: a demo is fast, but going from “pretty good” to “shippable product” is brutally slow — early wins cause teams to underestimate the rest",
+          "Foundation models aren't capable enough; they should have pre-trained their own",
+          "80% was good enough to ship; the remaining 15% wasn't worth it"
+        ],
+        a: 1,
+        why: "This is the book's last mile challenge. Because foundation models are already impressive, a weekend demo is easy — but “the journey from 0 to 60 is easy, whereas progressing from 60 to 100 becomes exceedingly challenging” (UltraChat). LinkedIn spent 4× longer on the last 15% than on the first 80%, much of it fighting product kinks and hallucinations. Budget for that stretch when planning an AI product."
+      },
+      {
+        q: "Someone feeds their childhood journal entries into ChatGPT so it mimics their younger self, and calls this “training” ChatGPT. Technically, what is it?",
+        opts: [
+          "Pre-training — because new data was used",
+          "Finetuning — because the model learned a new behavior",
+          "Post-training — because it happened after the model was released",
+          "Prompt engineering — the model was steered purely through input context; no weights were updated"
+        ],
+        a: 3,
+        why: "Training always involves updating model weights. Putting journal entries into the conversation only supplies context — that's prompt engineering. The terminology: pre-training trains from randomly initialized weights (for InstructGPT it consumed ~98% of compute and data); finetuning/post-training continues training an already-trained model — called post-training when model developers do it, finetuning when application developers do."
+      },
+      {
+        q: "On defensibility of AI products, which path does the book consider most realistic for startups?",
+        opts: [
+          "Technology — outrun competitors with a better model architecture",
+          "Distribution — beat big companies at reach and channels",
+          "Data — get to market first, accumulate real usage data, and build a data flywheel that keeps improving the product",
+          "Price — always undercut the competition"
+        ],
+        a: 2,
+        why: "The three competitive advantages in AI: technology, data, and distribution. With everyone building on the same foundation models, core technology converges; distribution mostly belongs to big companies. The startup opportunity is data: ship first and accumulate usage data to continually improve. Even when user data can't train models directly, usage signals reveal user behavior and product gaps. That's also why the low entry barrier cuts both ways — if it's easy for you to build, it's easy for your competitors too."
+      }
+    ]
+  },
+  2: {
+    title: "Chapter 2 · Understanding Foundation Models",
+    questions: [
+      {
+        q: "Gunasekar et al. (2023) trained a 1.3B-parameter model on just 7B tokens of high-quality coding data and beat much larger models on coding benchmarks. What's the takeaway?",
+        opts: [
+          "Smaller models are inherently better at coding",
+          "Data quality can beat data quantity — a smaller model on curated data can outperform a larger model trained on indiscriminate web data",
+          "Coding benchmarks are unreliable and should be ignored",
+          "7B tokens is the optimal dataset size for any model"
+        ],
+        a: 1,
+        why: "Training on more data isn't always better: it costs more compute and doesn't guarantee performance. Model developers often default to “use what we have” (e.g., Common Crawl — which includes plenty of clickbait and misinformation), but a smaller amount of high-quality data can beat a mountain of low-quality data. Quantity, quality, and diversity are the three golden goals of training data."
+      },
+      {
+        q: "On the MASSIVE dataset, the same content has a median length of 7 tokens in English but 72 tokens in Burmese. What does this imply for an API that charges per token?",
+        opts: [
+          "Burmese costs about 10× more and is about 10× slower than English for the same content",
+          "Burmese costs the same — providers charge per request, not per token",
+          "Burmese is cheaper because each token carries more information",
+          "It only affects training cost, not inference"
+        ],
+        a: 0,
+        why: "Inference latency and cost are proportional to token counts, and tokenization efficiency varies wildly across languages. If generating each token takes the same time, the same content takes ~10× longer and ~10× more money in Burmese than English. Combined with under-representation in training data (English is ~46% of Common Crawl), this is why non-English languages often get worse, slower, and more expensive service from general-purpose models."
+      },
+      {
+        q: "The transformer was designed to fix two problems of seq2seq (RNN-based). Which pair is correct?",
+        opts: [
+          "① The decoder only saw the input's final hidden state (like answering questions about a book from just its summary); ② RNNs processed tokens sequentially, making long sequences slow",
+          "① seq2seq couldn't do translation; ② seq2seq had too many parameters",
+          "① seq2seq had no decoder; ② seq2seq couldn't be trained with gradient descent",
+          "① seq2seq only worked for English; ② seq2seq required labeled data"
+        ],
+        a: 0,
+        why: "Exactly the two problems Vaswani et al. (2017) addressed. The attention mechanism lets the model weigh all input tokens when generating each output token — like referencing any page of the book instead of just the summary — and dropping RNNs entirely lets input tokens be processed in parallel. Note: attention predates the transformer by three years; the transformer's insight was that attention works without RNNs."
+      },
+      {
+        q: "In the attention mechanism's book analogy, what do the query, key, and value vectors each represent?",
+        opts: [
+          "Query = the page content; Key = the page number; Value = the reader",
+          "Query = the reader looking for information; Key = each page's number; Value = each page's content",
+          "Query = the book summary; Key = the reader; Value = the index",
+          "Query, key, and value are three copies of the same vector"
+        ],
+        a: 1,
+        why: "The query vector (Q) is the decoder's current state — the person looking for information. Each key vector (K) indexes a previous token, like a page number; each value vector (V) is that token's learned content, like the page's text. Attention scores come from dot products between Q and each K: a high score means that token's V contributes more to the output. This is also why long contexts are expensive — every previous token needs its K and V computed and stored."
+      },
+      {
+        q: "Inference for a transformer-based LLM has two steps: prefill and decode. Which property of each step drives optimization work?",
+        opts: [
+          "Prefill processes input tokens in parallel; decode generates output tokens one at a time, sequentially",
+          "Prefill is sequential; decode is parallel",
+          "Both are fully parallel — that's the transformer's whole advantage",
+          "Both are sequential — the transformer didn't change inference at all"
+        ],
+        a: 0,
+        why: "Prefill processes all input tokens in parallel and builds the intermediate state (keys and values for every input token). Decode then generates one output token at a time — the sequential output bottleneck remains, which is why a 100-token answer at 10ms/token takes a full second. The parallel nature of prefill and the sequential nature of decode motivate most of the inference optimizations in Chapter 9."
+      },
+      {
+        q: "Mixtral 8x7B is a mixture-of-experts model with 46.7B total parameters, but only two experts are active per token (12.9B parameters). What are its inference cost and speed comparable to?",
+        opts: [
+          "A 46.7B dense model — all parameters must be loaded, so all are paid for",
+          "A 12.9B dense model — only the active parameters drive cost and speed",
+          "A 56B dense model — eight experts times seven billion",
+          "A 7B dense model — one expert at a time"
+        ],
+        a: 1,
+        why: "In an MoE model, only a subset of experts processes each token. Mixtral has 46.7B total parameters (shared parameters mean it's less than 8×7B), but with just 12.9B active per token, its cost and speed match a 12.9B model. This is also why raw parameter count can mislead for sparse models — a large sparse model can need less compute than a smaller dense one."
+      },
+      {
+        q: "Under the Chinchilla scaling law, a compute-optimal 3B-parameter model should be trained on roughly how many tokens?",
+        opts: [
+          "About 3B tokens — equal to the parameter count",
+          "About 60B tokens — roughly 20× the parameter count",
+          "About 300M tokens — a tenth of the parameter count",
+          "Token count doesn't matter, only FLOPs do"
+        ],
+        a: 1,
+        why: "Chinchilla (DeepMind, 2022): for compute-optimal training, the number of training tokens should be ~20× the model size, and both should scale together — double the model, double the tokens. Caveat: compute-optimal isn't always production-optimal. Llama deliberately chose smaller-than-optimal models trained longer, because smaller models are cheaper to inference and easier to deploy — a big reason for their adoption."
+      },
+      {
+        q: "To train a reward model for RLHF, why collect comparison data — (prompt, winning_response, losing_response) — rather than ask labelers to score each response directly?",
+        opts: [
+          "Comparison data is what reinforcement learning algorithms legally require",
+          "Pointwise scores are unreliable — different labelers (even the same labeler twice) give inconsistent absolute scores, but choosing which of two responses is better is an easier, more consistent task",
+          "Comparison data is cheaper to store",
+          "Scoring requires a GPU, comparing doesn't"
+        ],
+        a: 1,
+        why: "Asking for absolute scores yields noisy data: one labeler gives a 5, another a 7, and the same person may score the same pair differently on different days. Comparing two responses is easier and more consistent (InstructGPT's inter-labeler agreement was ~73%). The reward model is then trained to maximize the score gap between winning and losing responses. Context: post-training = SFT on demonstration data (turning a completion machine into a conversational assistant), then preference finetuning (RLHF, or DPO as in Llama 3) — all using only ~2% of total compute for InstructGPT."
+      },
+      {
+        q: "What does setting temperature = 0 actually do in practice?",
+        opts: [
+          "The model refuses to answer — you can't divide logits by zero",
+          "The model picks the token with the highest logit (argmax), making outputs mostly consistent",
+          "The model samples uniformly across the whole vocabulary",
+          "The model always produces factually correct answers"
+        ],
+        a: 1,
+        why: "Temperature divides the logits before softmax: higher temperature boosts rarer tokens (more creative, less coherent); lower temperature concentrates probability on the obvious token. Since dividing by zero is impossible, temperature 0 is implemented as simply taking the largest logit — greedy argmax. Note this still doesn't guarantee 100% consistency: hardware differences in executing the same instructions can also change outputs."
+      },
+      {
+        q: "The book gives two hypotheses for why models hallucinate. Which pair matches?",
+        opts: [
+          "① Models are too small; ② training data is too old",
+          "① Self-delusion: the model can't distinguish tokens it generated from tokens it was given, so it builds on its own errors; ② knowledge mismatch: SFT trains the model to mimic labeler answers that use knowledge the model lacks — effectively teaching it to make things up",
+          "① Users write ambiguous prompts; ② context windows are too short",
+          "① Temperature is set too high; ② top-p is set too low"
+        ],
+        a: 1,
+        why: "Hypothesis 1 (DeepMind): a model treats its own generated sequence as given fact — one slightly-off sentence snowballs into confidently wrong output (snowballing hallucinations). Hypothesis 2 (Gao/Schulman at OpenAI): during SFT, labelers write answers using knowledge the model doesn't have, so mimicry teaches fabrication. The two complement each other — one blames self-supervision, the other supervision. Interestingly, the InstructGPT paper showed RLHF made hallucination worse even though humans preferred the model overall."
+      }
+    ]
+  }
+};
+
+const TOTAL_CHAPTERS = 10;
+let current = 1, qi = 0, score = 0, answered = false, misses = [];
+
+const $ = id => document.getElementById(id);
+
+function buildNav(){
+  const nav = $("chapter-nav");
+  nav.innerHTML = "";
+  for(let c=1;c<=TOTAL_CHAPTERS;c++){
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.textContent = "Ch " + c;
+    const has = !!QUIZZES[c];
+    b.disabled = !has;
+    if(!has) b.title = "Coming after I finish this chapter";
+    b.setAttribute("aria-pressed", c===current ? "true" : "false");
+    b.addEventListener("click", ()=>{ current=c; startQuiz(); buildNav(); });
+    nav.appendChild(b);
+  }
+}
+
+function bestKey(c){ return "aie-quiz-best-ch"+c; }
+function getBest(c){ try{ return localStorage.getItem(bestKey(c)); }catch(e){ return null; } }
+function setBest(c,v){ try{
+  const prev = parseInt(localStorage.getItem(bestKey(c))||"-1",10);
+  if(v>prev) localStorage.setItem(bestKey(c), String(v));
+}catch(e){} }
+
+function startQuiz(){
+  const quiz = QUIZZES[current];
+  $("result-area").hidden = true;
+  if(!quiz){ $("quiz-area").hidden = true; $("locked-note").hidden = false; $("chapter-title").textContent = "Chapter " + current + " · Coming soon"; return; }
+  $("locked-note").hidden = true;
+  $("quiz-area").hidden = false;
+  $("chapter-title").textContent = quiz.title;
+  qi = 0; score = 0; misses = [];
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const quiz = QUIZZES[current];
+  const q = quiz.questions[qi];
+  answered = false;
+  $("q-counter").textContent = `Question ${qi+1} of ${quiz.questions.length}`;
+  $("q-score").textContent = `Correct: ${score}`;
+  $("q-bar").style.width = (qi/quiz.questions.length*100)+"%";
+  $("q-text").textContent = q.q;
+  $("q-explain").hidden = true;
+  $("q-next").hidden = true;
+  const box = $("q-opts");
+  box.innerHTML = "";
+  q.opts.forEach((t,i)=>{
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.innerHTML = `<span class="key">${"ABCD"[i]}</span><span></span>`;
+    b.lastElementChild.textContent = t;
+    b.addEventListener("click", ()=>answer(i,b));
+    box.appendChild(b);
+  });
+}
+
+function answer(i, btn){
+  if(answered) return;
+  answered = true;
+  const quiz = QUIZZES[current];
+  const q = quiz.questions[qi];
+  const opts = [...$("q-opts").children];
+  opts.forEach(o=>o.disabled=true);
+  const ok = i===q.a;
+  if(ok) score++; else misses.push(qi);
+  opts[q.a].classList.add("correct");
+  if(!ok) btn.classList.add("wrong");
+  const ex = $("q-explain");
+  ex.className = "explain " + (ok?"ok":"ko");
+  ex.innerHTML = `<b>${ok?"Correct":"Correct answer: "+"ABCD"[q.a]}</b>`;
+  const p = document.createElement("span");
+  p.textContent = q.why;
+  ex.appendChild(p);
+  ex.hidden = false;
+  $("q-score").textContent = `Correct: ${score}`;
+  const next = $("q-next");
+  next.textContent = qi === quiz.questions.length-1 ? "See results" : "Next";
+  next.hidden = false;
+  next.focus();
+}
+
+function showResult(){
+  const quiz = QUIZZES[current];
+  const n = quiz.questions.length;
+  $("quiz-area").hidden = true;
+  $("result-area").hidden = false;
+  $("r-chapter").textContent = quiz.title;
+  $("r-score").textContent = score;
+  $("r-total").textContent = " / " + n;
+  const pct = score/n;
+  $("r-verdict").textContent =
+    pct===1 ? "Perfect score. You own this chapter — move on with confidence." :
+    pct>=0.8 ? "Solid grasp. Skim the sections behind the questions you missed." :
+    pct>=0.6 ? "The big picture is there, but a few key concepts are blurred — revisit the missed topics below." :
+    "Worth re-reading this chapter's summary, with the explanations below as a guide.";
+  setBest(current, score);
+  const best = getBest(current);
+  $("r-best").textContent = best!==null ? `Personal best for this chapter: ${best} / ${n}` : "";
+  const rv = $("r-review"), list = $("r-review-list");
+  if(misses.length){
+    rv.hidden = false;
+    list.innerHTML = "";
+    misses.forEach(idx=>{
+      const q = quiz.questions[idx];
+      const li = document.createElement("li");
+      li.textContent = q.q + " ";
+      const span = document.createElement("span");
+      span.className = "ra";
+      span.textContent = "→ " + q.opts[q.a];
+      li.appendChild(span);
+      list.appendChild(li);
+    });
+  } else rv.hidden = true;
+}
+
+$("q-next").addEventListener("click", ()=>{
+  const quiz = QUIZZES[current];
+  if(qi === quiz.questions.length-1){ showResult(); }
+  else { qi++; renderQuestion(); }
+});
+$("r-retry").addEventListener("click", ()=>{ startQuiz(); });
+
+buildNav();
+startQuiz();
+</script>
+</body>
+</html>
